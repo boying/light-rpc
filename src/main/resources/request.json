@@ -1,0 +1,14 @@
+{
+  "iface": "cn.test.Test",
+  "method": "add",
+  "args": [
+    {
+      "type": "int",
+      "value": "12"
+    },
+    {
+      "type": "int",
+      "value": "1"
+    }
+  ]
+}

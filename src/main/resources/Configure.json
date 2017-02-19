@@ -1,0 +1,46 @@
+{
+  "common":{
+    "registryAddress": ""
+  },
+
+  "server":{
+    "appId": "app",
+    "protocol": "json",
+    "port": 123,
+    "serviceBeanProvider": "",
+    "interfaces": [
+      "test.Test"
+    ],
+    "threadPoolSize": 123
+  },
+
+  "clients":[
+    {
+      "appId": "test",
+      "protocol": "json",
+      "threadPoolSize": 123,
+      "methodDefaultTimeoutMillisecond": 123,
+      "serverProviders":[
+        {
+          "ip": "127.0.0.1",
+          "port": 123
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "test.Test",
+          "methods": [
+            {
+              "name": "",
+              "paramTypes": [
+                "int",
+                "java.util.List"
+              ],
+              "timeoutMillisecond": 123
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
