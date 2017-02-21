@@ -1,5 +1,6 @@
 package server;
 
+import bean.Result;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;

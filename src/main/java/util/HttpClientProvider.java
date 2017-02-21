@@ -51,7 +51,7 @@ public class HttpClientProvider {
         CloseableHttpClient httpClient = addressClientMap.get(address);
         if(httpClient == null){
             httpClient = genHttpClient(address);
-            httpClient = addressClientMap.putIfAbsent(address, httpClient);
+            addressClientMap.putIfAbsent(address, httpClient);
         }
         return httpClient;
     }

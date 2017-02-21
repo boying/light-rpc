@@ -7,11 +7,10 @@ import conf.ConfParser;
 import conf.Protocol;
 import register.Register;
 import register.ZooKeeperRegister;
-import server.JsonServer;
+import server.HttpServer;
 import server.Server;
 import server.ServiceBeanProvider;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,11 +25,20 @@ public class RpcContext {
     private volatile boolean initialized = false;
     private ServiceBeanProvider serviceBeanProvider;
 
+    /**
+     *
+     * @param confPath 配置文件路径
+     * @param serviceBeanProvider 服务方bean的提供者
+     */
     public RpcContext(String confPath, ServiceBeanProvider serviceBeanProvider) {
         this.confPath = confPath;
         this.serviceBeanProvider = serviceBeanProvider;
     }
 
+    /**
+     * 初始化
+     * @throws Exception
+     */
     public void init() throws Exception{
         parseConf(confPath);
 
@@ -59,7 +67,7 @@ public class RpcContext {
 
     private Server genServer(){
         if(conf.getServerConf().getProtocol() == Protocol.JSON){
-            return new JsonServer(conf.getServerConf());
+            return new HttpServer(conf.getServerConf());
         }
 
         return null;

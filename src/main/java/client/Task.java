@@ -1,7 +1,9 @@
-package task;
+package client;
 
 import bean.Request;
 import bean.Response;
+import bean.Result;
+import bean.TypeValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import conf.ServerProviderConf;
@@ -29,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by jiangzhiwen on 17/2/12.
  */
-public class JsonTask implements Callable{
+public class Task implements Callable<Result> {
     private static final JavaType RESPONSE_JAVA_TYPE = JacksonHelper.genJavaType(Response.class);
     private static final Map<Class, JavaType> clazzJavaTypeMap = new ConcurrentHashMap<>();
 
@@ -38,47 +40,40 @@ public class JsonTask implements Callable{
     private Method method;
     private Object[] args;
 
-    public JsonTask(IServerProvider hostProvider, Method method, Object[] args) {
+    public Task(IServerProvider hostProvider, Method method, Object[] args) {
         this.hostProvider = hostProvider;
         this.method = method;
         this.args = args;
     }
 
     @Override
-    public Object call() throws Exception {
+    public Result call() throws Exception {
         Request request = genRequest();
         String body = serialize(request);
         String rsp = send(body);
         Response response = deserialize(rsp);
-
-        if(response.getThrowable() != null){
-            throw new RuntimeException(response.getThrowable());
-        }
-
-        return deserializeResult(response.getResult());
-
+        return deserializeResult(response);
     }
 
-    private Request genRequest(){
+    private Request genRequest() {
         Request request = new Request();
         request.setIface(method.getDeclaringClass().getName());
         request.setMethod(method.getName());
-        List<Map<String, String>> paramMapList = new ArrayList<>();
+        List<TypeValue> typeValues = new ArrayList<>();
+        request.setArgs(typeValues);
         Class<?>[] parameterTypes = method.getParameterTypes();
-        for(int i = 0; i < parameterTypes.length; ++i){
+        for (int i = 0; i < parameterTypes.length; ++i) {
             Class<?> parameterType = parameterTypes[i];
-            HashMap<String, String> param = new HashMap<>();
             try {
-                param.put(parameterType.getName(), JacksonHelper.getMapper().writeValueAsString(args[i]));
+                typeValues.add(new TypeValue(parameterType.getName(), JacksonHelper.getMapper().writeValueAsString(args[i])));
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
-            paramMapList.add(param);
         }
-        return null;
+        return request;
     }
 
-    private String serialize(Request request){
+    private String serialize(Request request) {
         try {
             return JacksonHelper.getMapper().writeValueAsString(request);
         } catch (JsonProcessingException e) {
@@ -86,7 +81,7 @@ public class JsonTask implements Callable{
         }
     }
 
-    private String send(String body){
+    private String send(String body) {
         InetSocketAddress serverProviderAddress = hostProvider.get();
         httpClient = HttpClientProvider.getHttpClient(serverProviderAddress);
         HttpPost post = new HttpPost(genHttpPostUrl(serverProviderAddress));
@@ -94,7 +89,7 @@ public class JsonTask implements Callable{
         try {
             HttpResponse rsp = httpClient.execute(post);
             int status = rsp.getStatusLine().getStatusCode();
-            if(status != HttpStatus.SC_OK){
+            if (status != HttpStatus.SC_OK) {
                 throw new RuntimeException();
             }
             return EntityUtils.toString(rsp.getEntity());
@@ -103,11 +98,11 @@ public class JsonTask implements Callable{
         }
     }
 
-    private String genHttpPostUrl(InetSocketAddress address){
-        return "http://" + address;
+    private String genHttpPostUrl(InetSocketAddress address) {
+        return "http://" + address.getHostName() + ":" + address.getPort();
     }
 
-    private Response deserialize(String json){
+    private Response deserialize(String json) {
         try {
             return JacksonHelper.getMapper().readValue(json, RESPONSE_JAVA_TYPE);
             /* TODO why not use
@@ -118,25 +113,28 @@ public class JsonTask implements Callable{
         }
     }
 
-    private Object deserializeResult(String rst){
-        Class<?> returnType = method.getReturnType();
-        if(returnType == void.class || returnType == Void.class){
-            return null;
-        }
+    private Result deserializeResult(Response response) throws IOException {
+        Result ret = new Result();
+        ret.setInvokedSuccess(response.isInvokedSuccess());
+        Object result ;
+        if(response.getResult() == null){
 
-        JavaType javaType = clazzJavaTypeMap.get(returnType);
-        if(javaType == null){
-            javaType = JacksonHelper.genJavaType(returnType);
-            clazzJavaTypeMap.put(returnType, javaType);
+            result = null;
+        }else{
+            // TODO have bug how to process null
+            result = JacksonHelper.getMapper().readValue(response.getResult(), method.getReturnType());
         }
+        ret.setResult(result);
 
-        try {
-            return JacksonHelper.getMapper().readValue(rst, javaType);
-            /* TODO why not use
-            return JacksonHelper.getMapper().readValue(rst,method.getReturnType());
-            */
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        Throwable throwable;
+        if(response.getThrowable() == null){
+            throwable = null;
+        }else{
+            // TODO
+            throwable = JacksonHelper.getMapper().readValue(response.getThrowable(), Throwable.class);
         }
+        ret.setThrowable(throwable);
+        ret.setErrorMsg(response.getErrorMsg());
+        return ret;
     }
 }

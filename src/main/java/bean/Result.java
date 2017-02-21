@@ -1,4 +1,4 @@
-package server;
+package bean;
 
 import lombok.Data;
 import lombok.ToString;

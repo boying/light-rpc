@@ -1,13 +1,16 @@
 package client;
 
+import bean.Result;
 import conf.ClientConf;
 import conf.CommonConf;
 import conf.InterfaceConf;
 import conf.Protocol;
+import exception.ClientException;
+import exception.ClientTimeoutException;
+import exception.ServerException;
 import server_provider.IServerProvider;
 import server_provider.ListedServerProvider;
 import server_provider.ZooKeeperServerProvider;
-import task.JsonTask;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -33,7 +36,7 @@ public class Client {
     }
 
     public void init() throws ClassNotFoundException {
-        threadPool = new ThreadPoolExecutor(0, clientConf.getThreadPoolSize(), 1, TimeUnit.MINUTES, new ArrayBlockingQueue<>(0));
+        threadPool = new ThreadPoolExecutor(0, clientConf.getThreadPoolSize(), 1, TimeUnit.MINUTES, new ArrayBlockingQueue<>(1)); // TODO 1
 
         initServerProvider();
         genProxies();
@@ -50,10 +53,10 @@ public class Client {
     }
 
     private void genProxies() throws ClassNotFoundException {
-        List<InterfaceConf> interfaces = clientConf.getInterfaces();
-        for (InterfaceConf ifaceConf : interfaces) {
-            Class<?> clazz = ifaceConf.getClass();
-            classObjMap.put(clazz, genProxy(clazz, ifaceConf));
+        List<InterfaceConf> interfaceConfs = clientConf.getInterfaces();
+        for (InterfaceConf interfaceConf : interfaceConfs) {
+            Class<?> clazz = interfaceConf.getClazz();
+            classObjMap.put(clazz, genProxy(clazz, interfaceConf));
         }
     }
 
@@ -70,15 +73,32 @@ public class Client {
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            int methodTimeout = 0;
-            Future<Object> f = threadPool.submit(newTask(method, args));
-            Object ret = f.get(methodTimeout, TimeUnit.MILLISECONDS);
-            return ret;
+            // TODO
+            int methodTimeout = 1000000;
+            Future<Result> resultFuture = threadPool.submit(newTask(method, args));
+            Result result;
+            try {
+                result = resultFuture.get(methodTimeout, TimeUnit.MILLISECONDS);
+            }catch (TimeoutException e){
+                throw new ClientTimeoutException();
+            }catch (Exception e){
+                throw new ClientException(e);
+            }
+
+            if(result.isInvokedSuccess()){
+                if(result.getThrowable() == null){
+                    return result.getResult();
+                }else{
+                    throw result.getThrowable();
+                }
+            } else{
+                throw new ServerException(result.getErrorMsg());
+            }
         }
 
         private Callable newTask(Method method, Object[] args) {
             if (protocol == Protocol.JSON) {
-                return new JsonTask(serverProvider, method, args);
+                return new Task(serverProvider, method, args);
             }
             return null;
         }

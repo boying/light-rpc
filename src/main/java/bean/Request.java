@@ -12,5 +12,5 @@ import java.util.Map;
 public class Request {
     private String iface;
     private String method;
-    private List<Map<String, String>> args;
+    private List<TypeValue> args;
 }

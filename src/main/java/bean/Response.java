@@ -7,6 +7,8 @@ import lombok.Data;
  */
 @Data
 public class Response {
+    private boolean invokedSuccess;
     private String result;
     private String throwable;
+    private String errorMsg;
 }

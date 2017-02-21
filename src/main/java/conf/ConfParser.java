@@ -10,6 +10,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -72,7 +73,7 @@ public class ConfParser {
             ret.add(parseClientConf(client));
         }
 
-        return null;
+        return ret;
     }
 
     private static ClientConf parseClientConf(Client client) throws ClassNotFoundException, NoSuchMethodException {
@@ -107,7 +108,8 @@ public class ConfParser {
                 for (String type : method.getParamTypes()) {
                     types.add(Class.forName(type));
                 }
-                java.lang.reflect.Method method1 = clazz.getMethod(method.getName(), (Class<?>[]) types.toArray());
+
+                java.lang.reflect.Method method1 = clazz.getMethod(method.getName(), Arrays.copyOf(types.toArray(), types.size(), Class[].class));
                 methodConf.setMethod(method1);
                 method.setTimeoutMillisecond(method.getTimeoutMillisecond());
             }

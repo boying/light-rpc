@@ -1,40 +1,38 @@
 {
   "common":{
-    "registryAddress": ""
+    "registryAddress": "127.0.0.1:2181"
   },
 
   "server":{
-    "appId": "app",
+    "appId": "echo",
     "protocol": "json",
-    "port": 123,
-    "serviceBeanProvider": "",
+    "port": 8888,
     "interfaces": [
-      "test.Test"
+      "demo.service.IEcho"
     ],
     "threadPoolSize": 123
   },
 
   "clients":[
     {
-      "appId": "test",
+      "appId": "echo",
       "protocol": "json",
       "threadPoolSize": 123,
       "methodDefaultTimeoutMillisecond": 123,
       "serverProviders":[
         {
           "ip": "127.0.0.1",
-          "port": 123
+          "port": 8888
         }
       ],
       "interfaces": [
         {
-          "name": "test.Test",
+          "name": "demo.service.IEcho",
           "methods": [
             {
-              "name": "",
+              "name": "echo",
               "paramTypes": [
-                "int",
-                "java.util.List"
+                "java.lang.String"
               ],
               "timeoutMillisecond": 123
             }
