@@ -116,23 +116,10 @@ public class Task implements Callable<Result> {
     private Result deserializeResult(Response response) throws IOException {
         Result ret = new Result();
         ret.setInvokedSuccess(response.isInvokedSuccess());
-        Object result ;
-        if(response.getResult() == null){
-
-            result = null;
-        }else{
-            // TODO have bug how to process null
-            result = JacksonHelper.getMapper().readValue(response.getResult(), method.getReturnType());
-        }
+        Object result = JacksonHelper.getMapper().readValue(response.getResult(), method.getReturnType());
         ret.setResult(result);
 
-        Throwable throwable;
-        if(response.getThrowable() == null){
-            throwable = null;
-        }else{
-            // TODO
-            throwable = JacksonHelper.getMapper().readValue(response.getThrowable(), Throwable.class);
-        }
+        Throwable throwable = JacksonHelper.getMapper().readValue(response.getThrowable(), Throwable.class);
         ret.setThrowable(throwable);
         ret.setErrorMsg(response.getErrorMsg());
         return ret;

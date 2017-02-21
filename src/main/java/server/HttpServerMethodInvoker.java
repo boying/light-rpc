@@ -1,6 +1,7 @@
 package server;
 
 import bean.Request;
+import bean.Response;
 import bean.Result;
 import bean.TypeValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -98,8 +99,14 @@ public class HttpServerMethodInvoker extends ChannelInboundHandlerAdapter {
         String content = "";
         String contentType = "application/json; charset=utf-8";
         HttpResponseStatus status = HttpResponseStatus.OK;
+
+        Response response = new Response();
+        response.setInvokedSuccess(result.isInvokedSuccess());
+        response.setErrorMsg(result.getErrorMsg());
         try {
-            content = JacksonHelper.getMapper().writeValueAsString(result);
+            response.setResult(JacksonHelper.getMapper().writeValueAsString(result.getResult()));
+            response.setThrowable(JacksonHelper.getMapper().writeValueAsString(result.getThrowable()));
+            content = JacksonHelper.getMapper().writeValueAsString(response);
         }catch (Throwable throwable){
             Result rst = new Result();
             rst.setInvokedSuccess(false);

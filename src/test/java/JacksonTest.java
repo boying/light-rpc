@@ -217,7 +217,8 @@ public class JacksonTest {
         C1 c11 = mapper.readValue(s, JacksonHelper.genJavaType(C1.class));
         s = mapper.writeValueAsString(c11);
         System.out.println(s);
-
     }
+
+
 
 }
