@@ -17,6 +17,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
 import org.jboss.netty.handler.codec.http.*;
+import util.ClassUtil;
 import util.json.JacksonHelper;
 
 import java.lang.reflect.InvocationTargetException;
@@ -35,9 +36,9 @@ public class HttpServerMethodInvoker extends ChannelInboundHandlerAdapter {
     private final ServerConf serverConf;
     private ExecutorService executorService;
 
-    public HttpServerMethodInvoker(ServerConf serverConf) {
+    public HttpServerMethodInvoker(ServerConf serverConf, ExecutorService executorService) {
         this.serverConf = serverConf;
-        executorService = Executors.newFixedThreadPool(serverConf.getThreadPoolSize());
+        this.executorService = executorService;
     }
 
     @Override
@@ -51,7 +52,7 @@ public class HttpServerMethodInvoker extends ChannelInboundHandlerAdapter {
                 String s = byteBuf.toString(CharsetUtil.UTF_8);
                 Request request = JacksonHelper.getMapper().readValue(s, Request.class);
 
-                Class<?> clazz = Class.forName(request.getIface());
+                Class<?> clazz = ClassUtil.forName(request.getIface());
                 List<Class<?>> interfaces = serverConf.getInterfaces();
                 if (!interfaces.contains(clazz)) {
 //                    ctx.writeAndFlush(Result.invokedFailed("service interface no registered"));
@@ -69,7 +70,7 @@ public class HttpServerMethodInvoker extends ChannelInboundHandlerAdapter {
                 List<Class<?>> types = new ArrayList<>();
                 List<Object> values = new ArrayList<>();
                 for (TypeValue typeValue : request.getArgs()) {
-                    Class<?> type = Class.forName(typeValue.getType());
+                    Class<?> type = ClassUtil.forName(typeValue.getType());
                     types.add(type);
 
                     Object o = JacksonHelper.getMapper().readValue(typeValue.getValue(), type);
@@ -88,7 +89,7 @@ public class HttpServerMethodInvoker extends ChannelInboundHandlerAdapter {
                 }
             } catch (Exception e) {
 //                ctx.writeAndFlush(Result.invokedFailed("invoked failed" + e.getMessage()));
-                ctx.writeAndFlush(genHttpResponse(Result.invokedFailed("invoked failed" + e.getMessage())));
+                ctx.writeAndFlush(genHttpResponse(Result.invokedFailed("invoked failed " + e.getMessage())));
             }
         });
 

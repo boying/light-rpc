@@ -11,5 +11,5 @@ import java.util.List;
 @Data
 public class MethodConf {
     private Method method;
-    private int timeoutMillisecond;
+    private Integer timeoutMillisecond;
 }

@@ -51,6 +51,7 @@ public class Task implements Callable<Result> {
         Request request = genRequest();
         String body = serialize(request);
         String rsp = send(body);
+        System.out.println("rsp is " + rsp);
         Response response = deserialize(rsp);
         return deserializeResult(response);
     }
@@ -116,7 +117,12 @@ public class Task implements Callable<Result> {
     private Result deserializeResult(Response response) throws IOException {
         Result ret = new Result();
         ret.setInvokedSuccess(response.isInvokedSuccess());
-        Object result = JacksonHelper.getMapper().readValue(response.getResult(), method.getReturnType());
+        Object result;
+        if(method.getReturnType() != void.class) {
+            result = JacksonHelper.getMapper().readValue(response.getResult(), method.getReturnType());
+        }else{
+            result = "null";
+        }
         ret.setResult(result);
 
         Throwable throwable = JacksonHelper.getMapper().readValue(response.getThrowable(), Throwable.class);

@@ -8,4 +8,10 @@ public interface IEcho {
     String f1(String s, int i, Integer in);
     void f2();
     Void f3();
+
+    int add(int a, int... b);
+
+    default String haah(){
+        return "hahaha";
+    }
 }

@@ -1,6 +1,7 @@
 package conf;
 
 import conf.bean.*;
+import util.ClassUtil;
 import util.InetSocketAddressFactory;
 import util.json.JacksonHelper;
 
@@ -56,7 +57,7 @@ public class ConfParser {
         ret.setInterfaces(interfaces);
         if(server.getInterfaces() != null){
             for (String s : server.getInterfaces()) {
-                interfaces.add(Class.forName(s));
+                interfaces.add(ClassUtil.forName(s));
             }
         }
 
@@ -95,7 +96,7 @@ public class ConfParser {
             InterfaceConf interfaceConf = new InterfaceConf();
             interfaceConfs.add(interfaceConf);
 
-            interfaceConf.setClazz(Class.forName(anInterface.getName()));
+            interfaceConf.setClazz(ClassUtil.forName(anInterface.getName()));
             List<MethodConf> methodConfs = new ArrayList<>();
             interfaceConf.setMethodConfs(methodConfs);
 
@@ -106,7 +107,7 @@ public class ConfParser {
                 Class clazz = interfaceConf.getClazz();
                 List<Class<?>> types = new ArrayList<>();
                 for (String type : method.getParamTypes()) {
-                    types.add(Class.forName(type));
+                    types.add(ClassUtil.forName(type));
                 }
 
                 java.lang.reflect.Method method1 = clazz.getMethod(method.getName(), Arrays.copyOf(types.toArray(), types.size(), Class[].class));

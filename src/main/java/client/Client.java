@@ -1,11 +1,9 @@
 package client;
 
 import bean.Result;
-import conf.ClientConf;
-import conf.CommonConf;
-import conf.InterfaceConf;
-import conf.Protocol;
+import conf.*;
 import exception.ClientException;
+import exception.ClientTaskRejectedException;
 import exception.ClientTimeoutException;
 import exception.ServerException;
 import server_provider.IServerProvider;
@@ -18,6 +16,7 @@ import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.*;
 
 /**
@@ -29,6 +28,9 @@ public class Client {
     private IServerProvider serverProvider;
     private Map<Class, Object> classObjMap = new HashMap<>();
     private ExecutorService threadPool;
+    private Map<Method, Integer> methodTimeoutMap = new HashMap<>();
+    private static final int DEFAULT_METHOD_TIMEOUT = 10000;
+    private static final int WAITING_QUEUE_SIZE = 1000;
 
     public Client(CommonConf commonConf, ClientConf clientConf) {
         this.commonConf = commonConf;
@@ -36,18 +38,38 @@ public class Client {
     }
 
     public void init() throws ClassNotFoundException {
-        threadPool = new ThreadPoolExecutor(0, clientConf.getThreadPoolSize(), 1, TimeUnit.MINUTES, new ArrayBlockingQueue<>(1)); // TODO 1
+        threadPool = new ThreadPoolExecutor(0, clientConf.getThreadPoolSize(), 1, TimeUnit.MINUTES, new ArrayBlockingQueue<>(WAITING_QUEUE_SIZE));
 
+        initMethodTimeout();
         initServerProvider();
         genProxies();
     }
 
+    private void initMethodTimeout() {
+        int defaultTimeout = Optional.ofNullable(clientConf.getMethodDefaultTimeoutMillisecond()).orElse(DEFAULT_METHOD_TIMEOUT);
+        for (InterfaceConf interfaceConf : clientConf.getInterfaces()) {
+            Class clazz = interfaceConf.getClazz();
+            Method[] methods = clazz.getMethods();
+            for (Method method : methods) {
+                methodTimeoutMap.put(method, defaultTimeout);
+            }
+
+            for (MethodConf methodConf : interfaceConf.getMethodConfs()) {
+                if (methodConf.getTimeoutMillisecond() != null) {
+                    methodTimeoutMap.put(methodConf.getMethod(), methodConf.getTimeoutMillisecond());
+                }
+            }
+        }
+    }
+
     private void initServerProvider() {
-        if(clientConf.getServerProviders() != null || clientConf.getServerProviders().size() > 0){
+        if (clientConf.getServerProviders() != null && clientConf.getServerProviders().size() > 0) {
             serverProvider = new ListedServerProvider(clientConf.getServerProviders());
-        }else if(commonConf != null && commonConf.getRegistryAddress() != null){
-            serverProvider = new ZooKeeperServerProvider(commonConf.getRegistryAddress(), clientConf.getAppId());
-        }else{
+        } else if (commonConf != null && commonConf.getRegistryAddress() != null) {
+            ZooKeeperServerProvider zooKeeperServerProvider = new ZooKeeperServerProvider(commonConf.getRegistryAddress(), clientConf.getAppId());
+            zooKeeperServerProvider.init();
+            serverProvider = zooKeeperServerProvider;
+        } else {
             throw new RuntimeException("No Server Provider conf");
         }
     }
@@ -73,25 +95,36 @@ public class Client {
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            int methodTimeout = methodTimeoutMap.get(method);
             // TODO
-            int methodTimeout = 1000000;
-            Future<Result> resultFuture = threadPool.submit(newTask(method, args));
+            methodTimeout = 100000;
+            Future<Result> resultFuture;
+            long start;
+            try {
+                start = System.currentTimeMillis();
+                resultFuture = threadPool.submit(newTask(method, args));
+            } catch (RejectedExecutionException e) {
+                throw new ClientTaskRejectedException("client thread pool full");
+            }
             Result result;
             try {
                 result = resultFuture.get(methodTimeout, TimeUnit.MILLISECONDS);
-            }catch (TimeoutException e){
+                System.out.println("cost " + (System.currentTimeMillis() - start) + " mills");
+            } catch (TimeoutException e) {
                 throw new ClientTimeoutException();
-            }catch (Exception e){
+            } catch (Exception e) {
                 throw new ClientException(e);
+            } finally {
+                resultFuture.cancel(true);
             }
 
-            if(result.isInvokedSuccess()){
-                if(result.getThrowable() == null){
+            if (result.isInvokedSuccess()) {
+                if (result.getThrowable() == null) {
                     return result.getResult();
-                }else{
+                } else {
                     throw result.getThrowable();
                 }
-            } else{
+            } else {
                 throw new ServerException(result.getErrorMsg());
             }
         }

@@ -1,3 +1,5 @@
+import demo.service.IEcho;
+
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -22,7 +24,7 @@ public class Test {
     public void f4(List list){}
 
 
-    public static void main(String[] args) {
+    public static void main1(String[] args) {
         Method[] methods = Test.class.getMethods();
         for (Method method : methods) {
             System.out.print(method.getName() + "(");
@@ -37,4 +39,28 @@ public class Test {
         }
     }
 
+
+    public static void main2(String[] args) {
+        Method[] methods = IEcho.class.getMethods();
+        for (Method method : methods) {
+
+            System.out.println(method);
+        }
+    }
+
+
+    public static void main(String[] args) throws ClassNotFoundException {
+        //System.out.println(int.class.getName());
+        //System.out.println(int.class.getTypeName());
+        //Class<?> anInt = Class.forName("I");
+
+        /*
+        System.out.println(int.class == Integer.class);
+        System.out.println(int.class == Integer.TYPE);
+        */
+
+        System.out.println(int[].class.getName());
+        System.out.println(Class.forName(int[].class.getName()));
+
+    }
 }
