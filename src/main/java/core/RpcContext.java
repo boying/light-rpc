@@ -9,7 +9,6 @@ import register.Register;
 import register.ZooKeeperRegister;
 import server.HttpServer;
 import server.Server;
-import server.ServiceBeanProvider;
 
 import java.util.HashMap;
 import java.util.List;

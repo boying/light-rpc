@@ -1,5 +1,6 @@
 package server;
 
+import bean.Response;
 import bean.Result;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.netty.buffer.Unpooled;
@@ -17,7 +18,7 @@ import util.json.JacksonHelper;
 /**
  * Created by jiangzhiwen on 17/2/18.
  */
-public class ResponseSerializer extends ChannelOutboundHandlerAdapter{
+public class MethodResultSerializer extends ChannelOutboundHandlerAdapter{
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if(!(msg instanceof Result)){
@@ -33,8 +34,14 @@ public class ResponseSerializer extends ChannelOutboundHandlerAdapter{
         String content = "";
         String contentType = "application/json; charset=utf-8";
         HttpResponseStatus status = HttpResponseStatus.OK;
+
+        Response response = new Response();
+        response.setInvokedSuccess(result.isInvokedSuccess());
+        response.setErrorMsg(result.getErrorMsg());
         try {
-            content = JacksonHelper.getMapper().writeValueAsString(result);
+            response.setResult(JacksonHelper.getMapper().writeValueAsString(result.getResult()));
+            response.setThrowable(JacksonHelper.getMapper().writeValueAsString(result.getThrowable()));
+            content = JacksonHelper.getMapper().writeValueAsString(response);
         }catch (Throwable throwable){
             Result rst = new Result();
             rst.setInvokedSuccess(false);
@@ -46,8 +53,8 @@ public class ResponseSerializer extends ChannelOutboundHandlerAdapter{
         }
 
         FullHttpResponse ret = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(content.getBytes(CharsetUtil.UTF_8)));
-        ret.headers().set(HttpHeaders.Names.CONTENT_LENGTH, ret.content().readableBytes())
-                .set(HttpHeaders.Names.CONTENT_TYPE, contentType);
+        ret.headers().set(org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH, ret.content().readableBytes())
+                .set(org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE, contentType);
 
         return ret;
     }

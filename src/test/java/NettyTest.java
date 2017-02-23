@@ -1,10 +1,7 @@
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import server.ServerBootstrapFactory;
-
-import java.net.InetSocketAddress;
+import util.ServerBootstrapFactory;
 
 /**
  * Created by jiangzhiwen on 17/2/18.

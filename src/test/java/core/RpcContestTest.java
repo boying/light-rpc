@@ -2,11 +2,7 @@ package core;
 
 import demo.service.Echo;
 import demo.service.IEcho;
-import server.ServiceBeanProvider;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Scanner;
 
 /**

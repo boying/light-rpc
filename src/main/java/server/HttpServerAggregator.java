@@ -15,11 +15,6 @@ public class HttpServerAggregator extends ChannelInboundHandlerAdapter {
     private HttpRequest httpRequest;
     private ByteBuf byteBuf;
 
-    /*
-    public HttpServerAggregator() {
-    }
-    */
-
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {

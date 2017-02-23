@@ -1,7 +1,7 @@
 package conf;
 
 import lombok.Data;
-import server.ServiceBeanProvider;
+import core.ServiceBeanProvider;
 
 import java.util.List;
 

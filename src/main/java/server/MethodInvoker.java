@@ -32,20 +32,19 @@ import java.util.concurrent.Executors;
 /**
  * Created by jiangzhiwen on 17/2/18.
  */
-public class HttpServerMethodInvoker extends ChannelInboundHandlerAdapter {
+public class MethodInvoker extends ChannelInboundHandlerAdapter {
     private final ServerConf serverConf;
     private ExecutorService executorService;
 
-    public HttpServerMethodInvoker(ServerConf serverConf, ExecutorService executorService) {
+    public MethodInvoker(ServerConf serverConf, ExecutorService executorService) {
         this.serverConf = serverConf;
         this.executorService = executorService;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        Object[] msgs = (Object[]) msg;
-        HttpRequest httpRequest = (HttpRequest) msgs[0];
-        ByteBuf byteBuf = (ByteBuf) msgs[1];
+        FullHttpRequest httpRequest = (FullHttpRequest) msg;
+        ByteBuf byteBuf = httpRequest.content();
 
         executorService.submit(() -> {
             try {
@@ -55,15 +54,13 @@ public class HttpServerMethodInvoker extends ChannelInboundHandlerAdapter {
                 Class<?> clazz = ClassUtil.forName(request.getIface());
                 List<Class<?>> interfaces = serverConf.getInterfaces();
                 if (!interfaces.contains(clazz)) {
-//                    ctx.writeAndFlush(Result.invokedFailed("service interface no registered"));
-                    ctx.writeAndFlush(genHttpResponse(Result.invokedFailed("service interface no registered")));
+                    ctx.writeAndFlush(Result.invokedFailed("service interface no registered"));
                     return;
                 }
 
                 Object serviceBean = serverConf.getServiceBeanProvider().get(clazz);
                 if (serviceBean == null) {
-//                    ctx.writeAndFlush(Result.invokedFailed("service bean no found"));
-                    ctx.writeAndFlush(genHttpResponse(Result.invokedFailed("service bean no found")));
+                    ctx.writeAndFlush(Result.invokedFailed("service bean no found"));
                     return;
                 }
 
@@ -81,47 +78,14 @@ public class HttpServerMethodInvoker extends ChannelInboundHandlerAdapter {
 
                 try {
                     Object ret = method.invoke(serviceBean, values.toArray());
-//                    ctx.writeAndFlush(genHttpResponse(Result.invokedSuccess(ret, null)));
-                    ctx.writeAndFlush(genHttpResponse((Result.invokedSuccess(ret, null))));
+                    ctx.writeAndFlush(Result.invokedSuccess(ret, null));
                 } catch (InvocationTargetException e) {
-//                    ctx.writeAndFlush(Result.invokedSuccess(null, e.getCause()));
-                    ctx.writeAndFlush(genHttpResponse(Result.invokedSuccess(null, e.getCause())));
+                    ctx.writeAndFlush(Result.invokedSuccess(null, e.getCause()));
                 }
             } catch (Exception e) {
-//                ctx.writeAndFlush(Result.invokedFailed("invoked failed" + e.getMessage()));
-                ctx.writeAndFlush(genHttpResponse(Result.invokedFailed("invoked failed " + e.getMessage())));
+                ctx.writeAndFlush(Result.invokedFailed("invoked failed" + e.getMessage()));
             }
         });
 
-    }
-
-
-    private FullHttpResponse genHttpResponse(Result result){
-        String content = "";
-        String contentType = "application/json; charset=utf-8";
-        HttpResponseStatus status = HttpResponseStatus.OK;
-
-        Response response = new Response();
-        response.setInvokedSuccess(result.isInvokedSuccess());
-        response.setErrorMsg(result.getErrorMsg());
-        try {
-            response.setResult(JacksonHelper.getMapper().writeValueAsString(result.getResult()));
-            response.setThrowable(JacksonHelper.getMapper().writeValueAsString(result.getThrowable()));
-            content = JacksonHelper.getMapper().writeValueAsString(response);
-        }catch (Throwable throwable){
-            Result rst = new Result();
-            rst.setInvokedSuccess(false);
-            rst.setErrorMsg("serialize result error, " + throwable.getMessage());
-            try {
-                content = JacksonHelper.getMapper().writeValueAsString(rst);
-            } catch (JsonProcessingException ignored) {
-            }
-        }
-
-        FullHttpResponse ret = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(content.getBytes(CharsetUtil.UTF_8)));
-        ret.headers().set(org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH, ret.content().readableBytes())
-                .set(org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE, contentType);
-
-        return ret;
     }
 }
