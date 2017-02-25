@@ -35,7 +35,7 @@ public class HttpServer implements Server {
     @Override
     public void start() {
         executorService = new ThreadPoolExecutor(0, serverConf.getThreadPoolSize(), 1, TimeUnit.MINUTES, new ArrayBlockingQueue<>(WAITING_QUEUE_SIZE));
-        serverBootstrap = ServerBootstrapFactory.newServerBootstrap(1, 100, true);
+        serverBootstrap = ServerBootstrapFactory.newServerBootstrap(true);
 
         // Tcp参数设置
         // BACKLOG用于构造服务端套接字ServerSocket对象，标识当服务器请求处理线程全满时，用于临时存放已完成三次握手的请求的队列的最大长度

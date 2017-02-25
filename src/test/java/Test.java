@@ -2,6 +2,7 @@ import demo.service.IEcho;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by jiangzhiwen on 17/2/12.
@@ -59,8 +60,24 @@ public class Test {
         System.out.println(int.class == Integer.TYPE);
         */
 
+        //System.out.println(Runtime.getRuntime().availableProcessors());
+        /*
         System.out.println(int[].class.getName());
         System.out.println(Class.forName(int[].class.getName()));
+        */
 
+        AtomicInteger i = new AtomicInteger(Integer.MAX_VALUE);
+        System.out.println(i);
+        System.out.println(i.incrementAndGet());
+        System.out.println(-4 % 3);
+        H.h();
+
+    }
+
+    public static abstract class H{
+        public abstract void f();
+        public static void h(){
+            System.out.println("haha");
+        }
     }
 }

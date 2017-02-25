@@ -14,6 +14,8 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import server_provider.IServerProvider;
 import util.HttpClientProvider;
 import util.json.JacksonHelper;
@@ -32,6 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Created by jiangzhiwen on 17/2/12.
  */
 public class Task implements Callable<Result> {
+    private static Logger logger = LoggerFactory.getLogger(Task.class);
+
     private static final JavaType RESPONSE_JAVA_TYPE = JacksonHelper.genJavaType(Response.class);
     private static final Map<Class, JavaType> clazzJavaTypeMap = new ConcurrentHashMap<>();
 
@@ -50,8 +54,9 @@ public class Task implements Callable<Result> {
     public Result call() throws Exception {
         Request request = genRequest();
         String body = serialize(request);
+        logger.debug("request is {}", body);
         String rsp = send(body);
-        System.out.println("rsp is " + rsp);
+        logger.debug("response is {}", rsp);
         Response response = deserialize(rsp);
         return deserializeResult(response);
     }

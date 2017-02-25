@@ -1,7 +1,5 @@
 package server_provider;
 
-import conf.ServerProviderConf;
-
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,10 +17,7 @@ public class ListedServerProvider implements IServerProvider {
 
     @Override
     public InetSocketAddress get() {
-        if(idx.get() == Integer.MAX_VALUE){
-            idx.set(0);
-        }
-        int i = idx.getAndIncrement() % list.size();
+        int i = Math.abs(idx.getAndIncrement() % list.size());
         return list.get(i);
     }
 }

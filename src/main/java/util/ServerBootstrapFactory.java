@@ -11,6 +11,13 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
  * Created by jiangzhiwen on 17/2/18.
  */
 public class ServerBootstrapFactory {
+    private static final int DEFAULT_BOSS_EVENT_LOOP_SIZE = 1;
+    private static final int DEFAULT_WORKER_EVENT_LOOP_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+
+    public static ServerBootstrap newServerBootstrap(boolean epollFirst) {
+        return newServerBootstrap(DEFAULT_BOSS_EVENT_LOOP_SIZE, DEFAULT_WORKER_EVENT_LOOP_SIZE, epollFirst);
+    }
+
     public static ServerBootstrap newServerBootstrap(int bossThreads, int workerThreads, boolean epollFirst) {
         if (epollFirst && Epoll.isAvailable()) {
             return newEpollServerBootstrap(bossThreads, workerThreads);
