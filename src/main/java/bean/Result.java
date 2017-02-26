@@ -9,6 +9,9 @@ import lombok.ToString;
 @Data
 @ToString
 public class Result {
+    private boolean async;
+    private long asyncReqId;
+
     private boolean invokedSuccess;
     private Object result;
     private Throwable throwable;

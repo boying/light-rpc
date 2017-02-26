@@ -139,6 +139,7 @@ public class ConfParser {
 
         CommonConf ret = new CommonConf();
         ret.setRegistryAddress(InetSocketAddressFactory.get(common.getRegistryAddress()));
+        ret.setAsyncClientPort(common.getAsyncClientPort());
         return ret;
     }
 

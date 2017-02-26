@@ -7,6 +7,9 @@ import lombok.Data;
  */
 @Data
 public class Response {
+    private boolean async;
+    private long asyncReqId;
+
     private boolean invokedSuccess;
     private String result;
     private String throwable;

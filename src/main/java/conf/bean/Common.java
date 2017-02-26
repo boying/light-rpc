@@ -10,4 +10,5 @@ import java.net.InetSocketAddress;
 @Data
 public class Common {
     private String registryAddress;
+    private int asyncClientPort;
 }

@@ -1,6 +1,7 @@
 {
   "common":{
-    "registryAddress": "127.0.0.1:2181"
+    "registryAddress": "127.0.0.1:2181",
+    "asyncClientPort": 9999
   },
 
   "server":{

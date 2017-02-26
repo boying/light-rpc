@@ -1,6 +1,7 @@
 package client;
 
 import bean.Result;
+import client.async.AsyncCallTask;
 import conf.*;
 import exception.ClientException;
 import exception.ClientTaskRejectedException;
@@ -139,5 +140,10 @@ public class Client {
 
     public Map<Class, Object> getProxies() {
         return this.classObjMap;
+    }
+
+    public <T> Future<T> asyncCall(Method method, Object[] args, Class<T> retType) {
+
+        return new AsyncCallTask<T>(method, args, serverProvider, commonConf.getAsyncCallFutureContainer(), commonConf.getAsyncClientPort()).getFuture();
     }
 }

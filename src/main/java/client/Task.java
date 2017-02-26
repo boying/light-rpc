@@ -39,7 +39,6 @@ public class Task implements Callable<Result> {
     private static final JavaType RESPONSE_JAVA_TYPE = JacksonHelper.genJavaType(Response.class);
     private static final Map<Class, JavaType> clazzJavaTypeMap = new ConcurrentHashMap<>();
 
-    private HttpClient httpClient;
     private IServerProvider hostProvider;
     private Method method;
     private Object[] args;
@@ -52,60 +51,13 @@ public class Task implements Callable<Result> {
 
     @Override
     public Result call() throws Exception {
-        Request request = genRequest();
-        String body = serialize(request);
+        Request request = RequestFactory.newRequest(method, args, false, 0);
+        String body = RequestJsonSerializer.serialize(request);
         logger.debug("request is {}", body);
-        String rsp = send(body);
+        String rsp = RequestJsonSender.send(hostProvider, body);
         logger.debug("response is {}", rsp);
         Response response = deserialize(rsp);
         return deserializeResult(response);
-    }
-
-    private Request genRequest() {
-        Request request = new Request();
-        request.setIface(method.getDeclaringClass().getName());
-        request.setMethod(method.getName());
-        List<TypeValue> typeValues = new ArrayList<>();
-        request.setArgs(typeValues);
-        Class<?>[] parameterTypes = method.getParameterTypes();
-        for (int i = 0; i < parameterTypes.length; ++i) {
-            Class<?> parameterType = parameterTypes[i];
-            try {
-                typeValues.add(new TypeValue(parameterType.getName(), JacksonHelper.getMapper().writeValueAsString(args[i])));
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return request;
-    }
-
-    private String serialize(Request request) {
-        try {
-            return JacksonHelper.getMapper().writeValueAsString(request);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String send(String body) {
-        InetSocketAddress serverProviderAddress = hostProvider.get();
-        httpClient = HttpClientProvider.getHttpClient(serverProviderAddress);
-        HttpPost post = new HttpPost(genHttpPostUrl(serverProviderAddress));
-        post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
-        try {
-            HttpResponse rsp = httpClient.execute(post);
-            int status = rsp.getStatusLine().getStatusCode();
-            if (status != HttpStatus.SC_OK) {
-                throw new RuntimeException();
-            }
-            return EntityUtils.toString(rsp.getEntity());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String genHttpPostUrl(InetSocketAddress address) {
-        return "http://" + address.getHostName() + ":" + address.getPort();
     }
 
     private Response deserialize(String json) {

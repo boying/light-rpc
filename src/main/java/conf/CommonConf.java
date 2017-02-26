@@ -1,5 +1,6 @@
 package conf;
 
+import client.async.AsyncCallFutureContainer;
 import lombok.Data;
 
 import java.net.InetSocketAddress;
@@ -10,4 +11,6 @@ import java.net.InetSocketAddress;
 @Data
 public class CommonConf {
     private InetSocketAddress registryAddress;
+    private int asyncClientPort;
+    private AsyncCallFutureContainer asyncCallFutureContainer;
 }

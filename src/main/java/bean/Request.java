@@ -10,6 +10,10 @@ import java.util.Map;
  */
 @Data
 public class Request {
+    private boolean async;
+    private long asyncReqId;
+    private int asyncPort;
+
     private String iface;
     private String method;
     private List<TypeValue> args;
