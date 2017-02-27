@@ -1,6 +1,7 @@
 package client.async;
 
 import bean.Result;
+import exception.ClientException;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,7 +15,10 @@ public class AsyncCallFutureContainer {
 
     public void addAsyncCallFuture(AsyncCallFuture<?> future) {
         map.put(future.getRequest().getAsyncReqId(), future);
+    }
 
+    public AsyncCallFuture<?> getByReqId(long reqId){
+        return map.get(reqId);
     }
 
     public void discardAsyncCallFuture(AsyncCallFuture<?> future){
@@ -27,6 +31,11 @@ public class AsyncCallFutureContainer {
             asyncCallFuture.setResult(result);
             discardAsyncCallFuture(asyncCallFuture);
         }
+    }
+
+    public void discardAsyncCallFuture(AsyncCallFuture<?> future, ClientException clientException){
+        future.setClientException(clientException);
+        map.remove(future.getRequest().getAsyncReqId());
     }
 
 }

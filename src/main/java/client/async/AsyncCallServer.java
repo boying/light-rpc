@@ -1,7 +1,10 @@
 package client.async;
 
-import bean.Result;
 import lombok.RequiredArgsConstructor;
+import util.network.HttpServer;
+import util.network.SharedChannelHandlerGenerator;
+
+import java.util.Arrays;
 
 /**
  * Created by jiangzhiwen on 17/2/26.
@@ -10,16 +13,20 @@ import lombok.RequiredArgsConstructor;
 public class AsyncCallServer {
     private final int port;
     private final AsyncCallFutureContainer asyncCallFutureContainer;
+    private HttpServer httpServer;
 
     public void init() {
 
     }
 
     public void start() {
-
+        httpServer = new HttpServer(port, new SharedChannelHandlerGenerator(Arrays.asList(new ResponseHandler(asyncCallFutureContainer))));
+        httpServer.start();
     }
 
-    private void processResult(Result result) {
-        asyncCallFutureContainer.discardAsyncCallFuture(result);
+    public void close() {
+        if (httpServer != null) {
+            httpServer.close();
+        }
     }
 }

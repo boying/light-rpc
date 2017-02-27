@@ -46,46 +46,6 @@ public class MethodInvoker extends ChannelInboundHandlerAdapter {
         FullHttpRequest httpRequest = (FullHttpRequest) msg;
         ByteBuf byteBuf = httpRequest.content();
 
-        executorService.submit(() -> {
-            try {
-                String s = byteBuf.toString(CharsetUtil.UTF_8);
-                Request request = JacksonHelper.getMapper().readValue(s, Request.class);
-
-                Class<?> clazz = ClassUtil.forName(request.getIface());
-                List<Class<?>> interfaces = serverConf.getInterfaces();
-                if (!interfaces.contains(clazz)) {
-                    ctx.writeAndFlush(Result.invokedFailed("service interface no registered"));
-                    return;
-                }
-
-                Object serviceBean = serverConf.getServiceBeanProvider().get(clazz);
-                if (serviceBean == null) {
-                    ctx.writeAndFlush(Result.invokedFailed("service bean no found"));
-                    return;
-                }
-
-                List<Class<?>> types = new ArrayList<>();
-                List<Object> values = new ArrayList<>();
-                for (TypeValue typeValue : request.getArgs()) {
-                    Class<?> type = ClassUtil.forName(typeValue.getType());
-                    types.add(type);
-
-                    Object o = JacksonHelper.getMapper().readValue(typeValue.getValue(), type);
-                    values.add(o);
-                }
-
-                Method method = clazz.getMethod(request.getMethod(), Arrays.copyOf(types.toArray(), types.size(), Class[].class));
-
-                try {
-                    Object ret = method.invoke(serviceBean, values.toArray());
-                    ctx.writeAndFlush(Result.invokedSuccess(ret, null));
-                } catch (InvocationTargetException e) {
-                    ctx.writeAndFlush(Result.invokedSuccess(null, e.getCause()));
-                }
-            } catch (Exception e) {
-                ctx.writeAndFlush(Result.invokedFailed("invoked failed" + e.getMessage()));
-            }
-        });
-
+        executorService.submit(new Task(serverConf, ctx, byteBuf));
     }
 }

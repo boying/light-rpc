@@ -2,19 +2,15 @@ package client.async;
 
 import bean.AsyncResponse;
 import bean.Request;
-import bean.Response;
-import client.Client;
 import client.RequestFactory;
 import client.RequestJsonSender;
-import client.RequestJsonSerializer;
+import client.Request2JsonSerializer;
 import exception.ClientException;
-import exception.ClientTaskRejectedException;
 import exception.ServerException;
 import lombok.RequiredArgsConstructor;
 import server_provider.IServerProvider;
 import util.json.JacksonHelper;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.concurrent.Future;
 
@@ -31,8 +27,8 @@ public class AsyncCallTask<T> {
 
     public Future<T> getFuture() {
         Request request = RequestFactory.newRequest(method, args, true, port);
-        AsyncCallFuture<T> future = new AsyncCallFuture<T>(asyncCallFutureContainer, request);
-        String jsonReq = RequestJsonSerializer.serialize(request);
+        AsyncCallFuture<T> future = new AsyncCallFuture<>(method, request);
+        String jsonReq = Request2JsonSerializer.serialize(request);
         asyncCallFutureContainer.addAsyncCallFuture(future);
         AsyncResponse asyncResponse;
         try {

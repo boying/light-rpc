@@ -7,7 +7,7 @@ import util.json.JacksonHelper;
 /**
  * Created by jiangzhiwen on 17/2/26.
  */
-public class RequestJsonSerializer {
+public class Request2JsonSerializer {
     public static String serialize(Request request) {
         try {
             return JacksonHelper.getMapper().writeValueAsString(request);
