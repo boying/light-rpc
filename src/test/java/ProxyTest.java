@@ -20,7 +20,7 @@ public class ProxyTest {
         default void f2(){}
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         Method[] methods = B.class.getMethods();
         for (Method method : methods) {
             System.out.println(method);
@@ -49,9 +49,17 @@ public class ProxyTest {
             }
         });
 
-        b.b();
+        //b.b();
+        b.a();
+        b.toString();
         //b.haha();
         b.getClass();
+        //b.hashCode();
+
+        synchronized (b){
+            b.wait();
+            System.out.println("haha");
+        }
 
     }
 }

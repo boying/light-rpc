@@ -103,7 +103,8 @@ public class RpcContext {
 
             Map<Class, Object> clientProxies = client.getProxies();
             clientProxies.keySet().stream().forEach(key -> classProxyMap.put(key, clientProxies.get(key)));
-            clientProxies.values().stream().forEach(key -> proxyClientMap.put(key, client));
+            // TODO
+            //clientProxies.values().stream().forEach(key -> proxyClientMap.put(key, client));
         }
 
     }

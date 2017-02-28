@@ -1,22 +1,11 @@
 package util.network;
 
-import conf.ServerConf;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import server.MethodInvoker;
-import server.MethodResultSerializer;
-import server.Server;
 import util.ServerBootstrapFactory;
-
-import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by jiangzhiwen on 17/2/18.

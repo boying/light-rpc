@@ -96,9 +96,9 @@ public class Client {
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            int methodTimeout = methodTimeoutMap.get(method);
+            //int methodTimeout = methodTimeoutMap.get(method);
             // TODO
-            methodTimeout = 100000;
+            int methodTimeout = 100000;
             Future<Result> resultFuture;
             long start;
             try {

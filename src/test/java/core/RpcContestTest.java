@@ -34,6 +34,10 @@ public class RpcContestTest {
             String s = sc.nextLine();
 
             IEcho proxy = context.getProxy(IEcho.class);
+
+            proxy.toString();
+            proxy.hashCode();
+            proxy.getClass();
             /*
             System.out.println(proxy.echo(s));
 

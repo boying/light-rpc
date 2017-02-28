@@ -1,14 +1,9 @@
 package server;
 
 import conf.ServerConf;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.channel.ChannelHandler;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import util.ServerBootstrapFactory;
-import util.network.IChannelHandlerGenerator;
 import util.network.SharedChannelHandlerGenerator;
 
 import java.util.ArrayList;
@@ -39,10 +34,11 @@ public class HttpServer implements Server {
 
 
         List<ChannelHandler> handlers = new ArrayList<>();
-        handlers.add(new MethodResultSerializer());
         handlers.add(new MethodInvoker(serverConf, executorService));
 
         httpServer = new util.network.HttpServer(serverConf.getPort(), new SharedChannelHandlerGenerator(handlers));
+
+        httpServer.start();
     }
 
     @Override

@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 /**
  * Created by jiangzhiwen on 17/2/18.
  */
+@Deprecated
 public class HttpServerAggregator extends ChannelInboundHandlerAdapter {
     private HttpRequest httpRequest;
     private ByteBuf byteBuf;
