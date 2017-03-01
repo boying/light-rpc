@@ -49,7 +49,7 @@ public class AsyncCallFuture<T> implements Future<T> {
     @Override
     public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         if (result == null) {
-            if (latch.await(timeout, unit)) {
+            if (!latch.await(timeout, unit)) {
                 throw new TimeoutException();
             }
         }

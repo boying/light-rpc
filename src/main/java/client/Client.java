@@ -14,10 +14,7 @@ import server_provider.ZooKeeperServerProvider;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -84,21 +81,26 @@ public class Client {
     }
 
     private Object genProxy(Class iface, InterfaceConf conf) {
-        return Proxy.newProxyInstance(Client.class.getClassLoader(), new Class[]{iface}, new Handler(clientConf.getProtocol()));
+        return Proxy.newProxyInstance(Client.class.getClassLoader(), new Class[]{iface}, new Handler(iface, clientConf.getProtocol()));
     }
 
     private class Handler implements InvocationHandler {
+        private Class<?> proxyClass;
         private Protocol protocol;
 
-        public Handler(Protocol protocol) {
+        public Handler(Class<?> proxyClass, Protocol protocol) {
+            this.proxyClass = proxyClass;
             this.protocol = protocol;
         }
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            //int methodTimeout = methodTimeoutMap.get(method);
+            if(method.getDeclaringClass() == Object.class){
+                return method.invoke(proxyClass, args);
+            }
+            int methodTimeout = methodTimeoutMap.get(method);
             // TODO
-            int methodTimeout = 100000;
+            methodTimeout = 100000;
             Future<Result> resultFuture;
             long start;
             try {
@@ -142,9 +144,9 @@ public class Client {
         return this.classObjMap;
     }
 
-    public <T> Future<T> asyncCall(Method method, Object[] args, Class<T> retType) {
+    public <T> Future<T> asyncCall(Class clazz, Method method, Object[] args, Class<T> retType) {
 
         // TODO generic
-        return new AsyncCallTask<T>(method, args, serverProvider, commonConf.getAsyncCallFutureContainer(), commonConf.getAsyncClientPort()).getFuture();
+        return new AsyncCallTask<T>(clazz, method, args, serverProvider, commonConf.getAsyncCallFutureContainer(), commonConf.getAsyncClientPort()).getFuture();
     }
 }

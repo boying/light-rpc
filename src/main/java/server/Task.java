@@ -4,12 +4,9 @@ import bean.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import conf.ServerConf;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpResponse;
@@ -18,7 +15,10 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import util.ClassUtil;
+import util.FullHttpResponseFactory;
 import util.HttpClientProvider;
 import util.InetSocketAddressFactory;
 import util.json.JacksonHelper;
@@ -36,11 +36,11 @@ import java.util.List;
  */
 @RequiredArgsConstructor
 public class Task implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(Task.class);
+
     private final ServerConf serverConf;
     private final ChannelHandlerContext ctx;
     private final ByteBuf byteBuf;
-
-    private static final FullHttpResponse BAD_REQUEST = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST);
 
     @Override
     public void run() {
@@ -49,7 +49,8 @@ public class Task implements Runnable {
         try {
             request = JacksonHelper.getMapper().readValue(s, Request.class);
         } catch (IOException e) {
-            ctx.writeAndFlush(BAD_REQUEST);
+            ctx.writeAndFlush(FullHttpResponseFactory.BAD_REQUEST);
+            logger.warn("invalid request {}", s);
             return;
         }
 
@@ -58,18 +59,21 @@ public class Task implements Runnable {
             clazz = ClassUtil.forName(request.getIface());
         } catch (ClassNotFoundException e) {
             invokedFailed("class no found", request);
+            logger.warn("invalid request, no class found");
             return;
         }
 
         List<Class<?>> interfaces = serverConf.getInterfaces();
         if (!interfaces.contains(clazz)) {
             invokedFailed("service interface no registered", request);
+            logger.warn("invalid request, service interface no registered");
             return;
         }
 
         Object serviceBean = serverConf.getServiceBeanProvider().get(clazz);
         if (serviceBean == null) {
             invokedFailed("service bean no found", request);
+            logger.warn("service bean no found");
             return;
         }
 
@@ -81,6 +85,7 @@ public class Task implements Runnable {
                 type = ClassUtil.forName(typeValue.getType());
             } catch (ClassNotFoundException e) {
                 invokedFailed("class no found", request);
+                logger.warn("class no found");
                 return;
             }
             types.add(type);
@@ -90,6 +95,7 @@ public class Task implements Runnable {
                 o = JacksonHelper.getMapper().readValue(typeValue.getValue(), type);
             } catch (IOException e) {
                 invokedFailed("invalid param value " + typeValue.getValue(), request);
+                logger.warn("invalid param value {}", typeValue.getValue());
                 return;
             }
             values.add(o);
@@ -99,12 +105,14 @@ public class Task implements Runnable {
         try {
             method = clazz.getMethod(request.getMethod(), Arrays.copyOf(types.toArray(), types.size(), Class[].class));
         } catch (NoSuchMethodException e) {
-            invokedFailed("no such method", request);
+            invokedFailed("no such method " + request.getMethod(), request);
+            logger.warn("no such method " + request.getMethod());
             return;
         }
 
         if (request.isAsync()) {
             ctx.writeAndFlush(genHttpResponse(new AsyncResponse(request.getAsyncReqId(), true, null)));
+            logger.debug("send async call ack success");
         }
 
         Result result;
@@ -115,6 +123,7 @@ public class Task implements Runnable {
             result = Result.invokedSuccess(null, e.getCause());
         } catch (IllegalAccessException e) {
             result = Result.invokedFailed(e.getMessage());
+            logger.warn(e.getMessage());
         }
 
         invokedSuccess(result, request);
@@ -123,29 +132,36 @@ public class Task implements Runnable {
     private void invokedSuccess(Result result, Request request) {
         if (!request.isAsync()) {
             ctx.writeAndFlush(genHttpResponse(result));
+            logger.debug("send sync call result success");
         } else {
+            String hostName = ((InetSocketAddress) ctx.channel().remoteAddress()).getHostName();
+            int port = request.getAsyncPort();
             HttpClient httpClient = HttpClientProvider.getHttpClient(
-                    InetSocketAddressFactory.get(
-                            ((InetSocketAddress) ctx.channel().remoteAddress()).getHostName(),
-                            request.getAsyncPort()));
+                    InetSocketAddressFactory.get(hostName, port));
 
+
+            result.setAsync(true);
+            result.setAsyncReqId(request.getAsyncReqId());
             Response response = result2Response(result);
             String body = "";
             try {
                 body = JacksonHelper.getMapper().writeValueAsString(response);
             } catch (JsonProcessingException e) {
-                // todo
+                logger.warn(e.getMessage());
             }
 
-            HttpPost post = new HttpPost();
+            HttpPost post = new HttpPost("http://" + hostName + ":" + port);
             post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
             try {
                 HttpResponse rsp = httpClient.execute(post);
                 int status = rsp.getStatusLine().getStatusCode();
                 if (status != HttpStatus.SC_OK) {
+                    logger.warn("send async call result success, response is {}, but receive no OK ack");
+                } else {
+                    logger.debug("send async call result success, response is {}", body);
                 }
-            } catch (IOException e) {
-                // TODO
+            } catch (Exception e) {
+                logger.warn("send async call result failed, ", e);
             }
         }
     }
@@ -153,6 +169,7 @@ public class Task implements Runnable {
     private void invokedFailed(String msg, Request request) {
         if (request.isAsync()) {
             ctx.writeAndFlush(genHttpResponse(new AsyncResponse(request.getAsyncReqId(), false, msg)));
+            logger.debug("send async call ack, invoke failed");
         } else {
             Result result = new Result();
             result.setInvokedSuccess(false);
@@ -160,6 +177,7 @@ public class Task implements Runnable {
             result.setErrorMsg(msg);
 
             ctx.writeAndFlush(genHttpResponse(result));
+            logger.debug("send sync call ack, invoke failed");
         }
     }
 
@@ -173,10 +191,7 @@ public class Task implements Runnable {
         } catch (Throwable throwable) {
         }
 
-        FullHttpResponse ret = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(content.getBytes(CharsetUtil.UTF_8)));
-        ret.headers().set(org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH, ret.content().readableBytes())
-                .set(org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE, contentType);
-
+        FullHttpResponse ret = FullHttpResponseFactory.newFullHttpResponse(status, contentType, content.getBytes(CharsetUtil.UTF_8));
         return ret;
     }
 
@@ -213,9 +228,7 @@ public class Task implements Runnable {
         } catch (JsonProcessingException ignored) {
         }
 
-        FullHttpResponse ret = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(content.getBytes(CharsetUtil.UTF_8)));
-        ret.headers().set(org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH, ret.content().readableBytes())
-                .set(org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE, contentType);
+        FullHttpResponse ret = FullHttpResponseFactory.newFullHttpResponse(status, contentType, content.getBytes(CharsetUtil.UTF_8));
 
         return ret;
     }

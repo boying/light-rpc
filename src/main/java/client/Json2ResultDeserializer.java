@@ -14,6 +14,8 @@ public class Json2ResultDeserializer {
         Response response = deserialize2Response(json);
 
         Result ret = new Result();
+        ret.setAsyncReqId(response.getAsyncReqId());
+        ret.setAsync(response.isAsync());
         ret.setInvokedSuccess(response.isInvokedSuccess());
         Object result;
         if (retType != void.class) {

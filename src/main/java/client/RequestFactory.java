@@ -15,11 +15,15 @@ import java.util.List;
 public class RequestFactory {
 
     public static Request newRequest(Method method, Object[] args, boolean async, int asyncPort) {
+        return newRequest(method.getDeclaringClass(), method, args, async, asyncPort);
+    }
+
+        public static Request newRequest(Class clazz, Method method, Object[] args, boolean async, int asyncPort) {
         Request request = new Request();
         request.setAsync(async);
         request.setAsyncPort(asyncPort);
         request.setAsyncReqId(RequestIdGenertor.genId());
-        request.setIface(method.getDeclaringClass().getName());
+        request.setIface(clazz.getName());
         request.setMethod(method.getName());
         List<TypeValue> typeValues = new ArrayList<>();
         request.setArgs(typeValues);

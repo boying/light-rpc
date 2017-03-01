@@ -7,12 +7,12 @@ import conf.ClientConf;
 import conf.Conf;
 import conf.ConfParser;
 import conf.Protocol;
-import conf.bean.Method;
 import register.Register;
 import register.ZooKeeperRegister;
 import server.HttpServer;
 import server.Server;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,7 @@ import java.util.concurrent.Future;
 public class RpcContext {
     private String confPath;
     private Map<Class, Object> classProxyMap = new HashMap<>();
-    private Map<Object, Client> proxyClientMap = new HashMap<>();
+    private Map<Class, Client> classClientMap = new HashMap<>();
     private Conf conf;
     private volatile boolean initialized = false;
     private ServiceBeanProvider serviceBeanProvider;
@@ -54,20 +54,46 @@ public class RpcContext {
         initialized = true;
     }
 
-    private void initCommon(){
+    private void initCommon() {
         conf.getCommonConf().setAsyncCallFutureContainer(asyncCallFutureContainer);
         initAsyncCallServer();
     }
 
-    private void initAsyncCallServer(){
+    private void initAsyncCallServer() {
         AsyncCallServer asyncCallServer = new AsyncCallServer(conf.getCommonConf().getAsyncClientPort(), asyncCallFutureContainer);
         asyncCallServer.init();
         asyncCallServer.start();
     }
 
-    public <T> Future<T> asyncCall(Object proxy, java.lang.reflect.Method method, Object[] args, Class<T> retType) {
+    public <T> Future<T> asyncCall(Class<?> clazz, String methodName, Class<?>[] argTypes, Object[] args, Class<T> retType) {
+        if(args.length != argTypes.length){
+            throw new IllegalArgumentException("argTypes length not equal args length");
+        }
+        Method method = findMethod(clazz, methodName, argTypes);
+        if(method == null){
+            throw new RuntimeException("method no found");
+        }
 
-        return proxyClientMap.get(proxy).asyncCall(method, args, retType); // TODO remove retType
+        return classClientMap.get(clazz).asyncCall(clazz, method, args, retType); // TODO remove retType
+    }
+
+    private Method findMethod(Class clazz, String methodName, Class<?>[] argTypes) {
+        Method[] methods = clazz.getMethods();
+        for (Method method : methods) {
+            if (method.getName().equals(methodName)) {
+                Class<?>[] parameterTypes = method.getParameterTypes();
+                if (parameterTypes.length != argTypes.length) {
+                    return null;
+                }
+                for(int i = 0; i < parameterTypes.length; ++i){
+                    if(parameterTypes[i] != argTypes[i]){
+                        return null;
+                    }
+                }
+                return method;
+            }
+        }
+        return null;
     }
 
     private void initServer() throws Exception {
@@ -101,10 +127,9 @@ public class RpcContext {
             Client client = new Client(conf.getCommonConf(), clientConf);
             client.init();
 
-            Map<Class, Object> clientProxies = client.getProxies();
-            clientProxies.keySet().stream().forEach(key -> classProxyMap.put(key, clientProxies.get(key)));
-            // TODO
-            //clientProxies.values().stream().forEach(key -> proxyClientMap.put(key, client));
+            Map<Class, Object> classProxyMap = client.getProxies();
+            classProxyMap.keySet().stream().forEach(clazz -> this.classProxyMap.put(clazz, classProxyMap.get(clazz)));
+            classProxyMap.keySet().stream().forEach(clazz -> classClientMap.put(clazz, client));
         }
 
     }

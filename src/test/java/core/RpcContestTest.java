@@ -21,7 +21,7 @@ public class RpcContestTest {
 
 
 */
-        RpcContext context = new RpcContext("ConfigureZoo.json", new ServiceBeanProvider() {
+        RpcContext context = new RpcContext("Configure.json", new ServiceBeanProvider() {
             @Override
             public <T> T get(Class<T> clazz) {
                 return (T) new Echo();

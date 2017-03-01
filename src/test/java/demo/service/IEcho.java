@@ -11,6 +11,8 @@ public interface IEcho {
 
     int add(int a, int... b);
 
+    int sleep(int timeout);
+
     default String haah(){
         return "hahaha";
     }

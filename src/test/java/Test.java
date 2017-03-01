@@ -1,6 +1,21 @@
+import bean.Response;
+import bean.Result;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import demo.service.IEcho;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.util.EntityUtils;
+import util.HttpClientProvider;
+import util.InetSocketAddressFactory;
+import util.json.JacksonHelper;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -49,8 +64,31 @@ public class Test {
         }
     }
 
+    private static String genHttpPostUrl(InetSocketAddress address) {
+        return "http://" + address.getHostName() + ":" + address.getPort();
+    }
 
-    public static void main(String[] args) throws ClassNotFoundException {
+    public static void main(String[] args) {
+        HttpClient httpClient = HttpClientProvider.getHttpClient(
+                InetSocketAddressFactory.get("127.0.0.1", 9999)
+        );
+
+        String body = "{\"async\": true, \"asyncReqId\": 123, \"invokedSuccess\": true, \"result\": \"null\", \"throwable\": \"null\", \"errorMsg\": \"msg\"}";
+        HttpPost post = new HttpPost("http://127.0.0.1:9999");
+        post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
+        try {
+            HttpResponse rsp = httpClient.execute(post);
+            int status = rsp.getStatusLine().getStatusCode();
+            if (status != HttpStatus.SC_OK) {
+                throw new RuntimeException();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public static void main3(String[] args) throws ClassNotFoundException {
         //System.out.println(int.class.getName());
         //System.out.println(int.class.getTypeName());
         //Class<?> anInt = Class.forName("I");

@@ -40,4 +40,16 @@ public class Echo implements IEcho{
         }
         return ret;
     }
+
+    @Override
+    public int sleep(int timeout) {
+        System.out.println("sleep");
+        try {
+            Thread.currentThread().sleep(timeout);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("sleep over");
+        return 123;
+    }
 }

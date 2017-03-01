@@ -4,21 +4,26 @@ import bean.Response;
 import bean.Result;
 import client.Json2ResultDeserializer;
 import exception.ClientException;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import util.FullHttpResponseFactory;
 import util.json.JacksonHelper;
 
 /**
  * Created by jiangzhiwen on 17/2/28.
  */
 @RequiredArgsConstructor
+@ChannelHandler.Sharable
 public class ResponseHandler extends ChannelInboundHandlerAdapter {
+    private static final Logger logger = LoggerFactory.getLogger(ResponseHandler.class);
+
     private final AsyncCallFutureContainer asyncCallFutureContainer;
 
     @Override
@@ -27,19 +32,24 @@ public class ResponseHandler extends ChannelInboundHandlerAdapter {
         String json = httpRequest.content().toString(CharsetUtil.UTF_8);
 
         Response response = JacksonHelper.getMapper().readValue(json, Response.class);
+        logger.debug("response is {}", response);
+
         AsyncCallFuture<?> future = asyncCallFutureContainer.getByReqId(response.getAsyncReqId());
         if (future == null) {
-            ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND));
+            logger.warn("no future found by reqId {}", response.getAsyncReqId());
+            ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.NOT_FOUND));
             return;
         }
 
         try {
             Result result = Json2ResultDeserializer.deserialize(json, future.getMethod().getReturnType());
             asyncCallFutureContainer.discardAsyncCallFuture(result);
-            ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK));
+            ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.OK));
+            logger.debug("get async result success, result is {}", result);
         } catch (Exception e) {
+            logger.warn("get async result failed, ", e);
             asyncCallFutureContainer.discardAsyncCallFuture(future, new ClientException(e));
-            ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST));
+            ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.BAD_REQUEST));
         }
     }
 }
