@@ -1,10 +1,7 @@
 package conf.bean;
 
-import conf.InterfaceConf;
-import conf.Protocol;
 import lombok.Data;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 
 /**

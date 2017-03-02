@@ -1,8 +1,8 @@
 package core;
 
+import client.Client;
 import client.async.AsyncCallFutureContainer;
 import client.async.AsyncCallServer;
-import client.Client;
 import conf.ClientConf;
 import conf.Conf;
 import conf.ConfParser;
@@ -66,15 +66,15 @@ public class RpcContext {
     }
 
     public <T> Future<T> asyncCall(Class<?> clazz, String methodName, Class<?>[] argTypes, Object[] args, Class<T> retType) {
-        if(args.length != argTypes.length){
+        if (args.length != argTypes.length) {
             throw new IllegalArgumentException("argTypes length not equal args length");
         }
         Method method = findMethod(clazz, methodName, argTypes);
-        if(method == null){
+        if (method == null) {
             throw new RuntimeException("method no found");
         }
 
-        return classClientMap.get(clazz).asyncCall(clazz, method, args, retType); // TODO remove retType
+        return classClientMap.get(clazz).asyncCall(clazz, method, args, retType);
     }
 
     private Method findMethod(Class clazz, String methodName, Class<?>[] argTypes) {
@@ -85,8 +85,8 @@ public class RpcContext {
                 if (parameterTypes.length != argTypes.length) {
                     return null;
                 }
-                for(int i = 0; i < parameterTypes.length; ++i){
-                    if(parameterTypes[i] != argTypes[i]){
+                for (int i = 0; i < parameterTypes.length; ++i) {
+                    if (parameterTypes[i] != argTypes[i]) {
                         return null;
                     }
                 }
@@ -134,6 +134,12 @@ public class RpcContext {
 
     }
 
+    /**
+     * 获取Rpc代理对象
+     * @param clazz 需要被代理的class
+     * @param <T>
+     * @return
+     */
     public <T> T getProxy(Class<T> clazz) {
         if (!initialized) {
             throw new RuntimeException("not initialized");

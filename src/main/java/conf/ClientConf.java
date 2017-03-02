@@ -1,6 +1,5 @@
 package conf;
 
-import client.async.AsyncCallFutureContainer;
 import lombok.Data;
 
 import java.net.InetSocketAddress;

@@ -1,8 +1,5 @@
 package conf.bean;
 
-import conf.ClientConf;
-import conf.CommonConf;
-import conf.ServerConf;
 import lombok.Data;
 
 import java.util.List;

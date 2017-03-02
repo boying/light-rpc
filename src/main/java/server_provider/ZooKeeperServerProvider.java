@@ -6,6 +6,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
+import util.InetSocketAddressFactory;
 import util.ZooKeeperFactory;
 
 import java.io.IOException;
@@ -75,26 +76,12 @@ public class ZooKeeperServerProvider implements IServerProvider {
         confIndex = 0;
         serverProviderAddresses.clear();
         for (String nodeName : nodeNames) {
-            InetSocketAddress serverProviderConf = genServerProviderAddressFromNodeName(nodeName);
+            InetSocketAddress serverProviderConf = InetSocketAddressFactory.get(nodeName);
             if (serverProviderConf == null) {
                 // TODO log warning
             } else {
                 serverProviderAddresses.add(serverProviderConf);
             }
-        }
-    }
-
-    private InetSocketAddress genServerProviderAddressFromNodeName(String nodeName) {
-        String[] splits = nodeName.split(":");
-        if (splits.length != 2) {
-            return null;
-        }
-
-        try {
-            int port = Integer.parseInt(splits[1]);
-            return new InetSocketAddress(splits[0], port);
-        } catch (NumberFormatException e) {
-            return null;
         }
     }
 

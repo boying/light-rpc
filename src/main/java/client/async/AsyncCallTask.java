@@ -2,9 +2,9 @@ package client.async;
 
 import bean.AsyncResponse;
 import bean.Request;
+import client.Request2JsonSerializer;
 import client.RequestFactory;
 import client.RequestJsonSender;
-import client.Request2JsonSerializer;
 import exception.ClientException;
 import exception.ServerException;
 import lombok.RequiredArgsConstructor;
