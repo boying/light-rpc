@@ -1,14 +1,15 @@
 package client;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import server_provider.IServerProvider;
-import util.HttpClientProvider;
+import util.CloseableHttpClientFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -17,22 +18,20 @@ import java.net.InetSocketAddress;
  * Created by jiangzhiwen on 17/2/26.
  */
 public class RequestJsonSender {
-    public static String send(IServerProvider hostProvider, String body) {
+    private static final Logger logger = LoggerFactory.getLogger(RequestJsonSender.class);
+
+    public static String send(IServerProvider hostProvider, String body) throws IOException {
         InetSocketAddress serverProviderAddress = hostProvider.get();
-        HttpClient httpClient = HttpClientProvider.getHttpClient(serverProviderAddress);
+        CloseableHttpClient httpClient = CloseableHttpClientFactory.getCloseableHttpClient(serverProviderAddress);
 
         HttpPost post = new HttpPost(genHttpPostUrl(serverProviderAddress));
         post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
-        try {
-            HttpResponse rsp = httpClient.execute(post);
-            int status = rsp.getStatusLine().getStatusCode();
-            if (status != HttpStatus.SC_OK) {
-                throw new RuntimeException();
-            }
-            return EntityUtils.toString(rsp.getEntity());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        logger.debug("post req is {}", post);
+        CloseableHttpResponse rsp = httpClient.execute(post);
+        logger.debug("rsp is {}", rsp);
+        String ret = EntityUtils.toString(rsp.getEntity());
+        rsp.close();
+        return ret;
     }
 
     private static String genHttpPostUrl(InetSocketAddress address) {

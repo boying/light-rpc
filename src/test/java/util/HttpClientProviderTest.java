@@ -18,7 +18,7 @@ public class HttpClientProviderTest {
     public static void main(String[] args) throws IOException {
 
         InetSocketAddress serverProviderAddress = InetSocketAddressFactory.get("127.0.0.1:8888");
-        HttpClient httpClient = HttpClientProvider.getHttpClient(serverProviderAddress);
+        HttpClient httpClient = CloseableHttpClientFactory.getCloseableHttpClient(serverProviderAddress);
         //HttpClient httpClient = HttpClients.custom().build();
 
         HttpPost post = new HttpPost("http://127.0.0.1:8888");

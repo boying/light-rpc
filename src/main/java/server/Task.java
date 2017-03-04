@@ -9,17 +9,17 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 import lombok.RequiredArgsConstructor;
-import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.ClassUtil;
+import util.CloseableHttpClientFactory;
 import util.FullHttpResponseFactory;
-import util.HttpClientProvider;
 import util.InetSocketAddressFactory;
 import util.json.JacksonHelper;
 
@@ -136,7 +136,7 @@ public class Task implements Runnable {
         } else {
             String hostName = ((InetSocketAddress) ctx.channel().remoteAddress()).getHostName();
             int port = request.getAsyncPort();
-            HttpClient httpClient = HttpClientProvider.getHttpClient(
+            CloseableHttpClient httpClient = CloseableHttpClientFactory.getCloseableHttpClient(
                     InetSocketAddressFactory.get(hostName, port));
 
 
@@ -152,8 +152,7 @@ public class Task implements Runnable {
 
             HttpPost post = new HttpPost("http://" + hostName + ":" + port);
             post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
-            try {
-                HttpResponse rsp = httpClient.execute(post);
+            try (CloseableHttpResponse rsp = httpClient.execute(post)) {
                 int status = rsp.getStatusLine().getStatusCode();
                 if (status != HttpStatus.SC_OK) {
                     logger.warn("send async call result success, response is {}, but receive no OK ack");

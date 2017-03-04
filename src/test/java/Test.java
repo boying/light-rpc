@@ -1,6 +1,3 @@
-import bean.Response;
-import bean.Result;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import demo.service.IEcho;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -8,10 +5,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.util.EntityUtils;
-import util.HttpClientProvider;
+import util.CloseableHttpClientFactory;
 import util.InetSocketAddressFactory;
-import util.json.JacksonHelper;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -69,7 +64,7 @@ public class Test {
     }
 
     public static void main(String[] args) {
-        HttpClient httpClient = HttpClientProvider.getHttpClient(
+        HttpClient httpClient = CloseableHttpClientFactory.getCloseableHttpClient(
                 InetSocketAddressFactory.get("127.0.0.1", 9999)
         );
 

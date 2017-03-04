@@ -13,14 +13,14 @@ public class InetSocketAddressFactory {
         return new InetSocketAddress(host, port);
     }
 
-    public static InetSocketAddress get(String hostIp) {
-        if (hostIp == null) {
+    public static InetSocketAddress get(String ipPort) {
+        if (ipPort == null) {
             throw new IllegalArgumentException("host is null");
         }
 
-        String[] splits = hostIp.split(":");
+        String[] splits = ipPort.split(":");
         if (splits.length != 2) {
-            throw new IllegalArgumentException("invalid hostIp[" + hostIp + "] format");
+            throw new IllegalArgumentException("invalid hostIp[" + ipPort + "] format");
         }
 
         int port;
@@ -28,7 +28,7 @@ public class InetSocketAddressFactory {
             port = Integer.parseInt(splits[1]);
 
         } catch (Exception e) {
-            throw new IllegalArgumentException("invalid hostIp[" + hostIp + "] format");
+            throw new IllegalArgumentException("invalid hostIp[" + ipPort + "] format");
         }
 
         return new InetSocketAddress(splits[0], port);
