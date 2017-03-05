@@ -16,9 +16,16 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Created by jiangzhiwen on 17/2/19.
+ * 配置文件解析器
  */
 public class ConfParser {
+    /**
+     * 根据文件名解析配置
+     *
+     * @param path 文件路径。如果文件路径以/打头,将从系统文件路径加载;如果是相对路径,则从classpath查找
+     * @return
+     * @throws Exception
+     */
     public static Conf parseByPath(String path) throws Exception {
         Path p;
         if (path.startsWith("/")) {
@@ -31,6 +38,13 @@ public class ConfParser {
         return parse(jsonStr);
     }
 
+    /**
+     * 根据json串解析配置
+     *
+     * @param jsonStr
+     * @return
+     * @throws Exception
+     */
     public static Conf parse(String jsonStr) throws Exception {
         light.rpc.conf.bean.Conf conf = JacksonHelper.getMapper().readValue(jsonStr, light.rpc.conf.bean.Conf.class);
 
@@ -43,7 +57,7 @@ public class ConfParser {
     }
 
     private static ServerConf parseServerConf(Server server) throws ClassNotFoundException {
-        if(server == null){
+        if (server == null) {
             return null;
         }
 
@@ -55,7 +69,7 @@ public class ConfParser {
 
         List<Class<?>> interfaces = new ArrayList<>();
         ret.setInterfaces(interfaces);
-        if(server.getInterfaces() != null){
+        if (server.getInterfaces() != null) {
             for (String s : server.getInterfaces()) {
                 interfaces.add(ClassUtil.forName(s));
             }
@@ -112,11 +126,11 @@ public class ConfParser {
 
                 java.lang.reflect.Method method1 = clazz.getMethod(method.getName(), Arrays.copyOf(types.toArray(), types.size(), Class[].class));
                 methodConf.setMethod(method1);
-                method.setTimeoutMillisecond(method.getTimeoutMillisecond());
+                methodConf.setTimeoutMillisecond(method.getTimeoutMillisecond());
             }
         }
 
-        if(client.getServerProviders() != null){
+        if (client.getServerProviders() != null) {
             for (IpPort ipPort : client.getServerProviders()) {
                 serverProviders.add(InetSocketAddressFactory.get(ipPort.getIp(), ipPort.getPort()));
             }
@@ -138,7 +152,9 @@ public class ConfParser {
         }
 
         CommonConf ret = new CommonConf();
-        ret.setRegistryAddress(InetSocketAddressFactory.get(common.getRegistryAddress()));
+        if (common.getRegistryAddress() != null) {
+            ret.setRegistryAddress(InetSocketAddressFactory.get(common.getRegistryAddress()));
+        }
         ret.setAsyncClientPort(common.getAsyncClientPort());
         return ret;
     }

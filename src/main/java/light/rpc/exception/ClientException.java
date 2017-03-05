@@ -1,7 +1,7 @@
 package light.rpc.exception;
 
 /**
- * Created by jiangzhiwen on 17/2/21.
+ * 客户端发生的异常
  */
 public class ClientException extends RuntimeException{
     public ClientException(String message) {

@@ -1,6 +1,5 @@
 package light.rpc.util.json;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.Test;
 
 import java.io.IOException;

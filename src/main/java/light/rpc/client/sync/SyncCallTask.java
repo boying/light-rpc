@@ -6,11 +6,11 @@ import light.rpc.client.RequestFactory;
 import light.rpc.client.RequestJsonSender;
 import light.rpc.protocol.Request;
 import light.rpc.result.Result;
+import light.rpc.server_address_provider.IServerAddressProvider;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import light.rpc.server_provider.IServerProvider;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
@@ -26,7 +26,7 @@ public class SyncCallTask implements Callable<Result> {
      * rpc服务方提供者
      */
     @NonNull
-    private final IServerProvider hostProvider;
+    private final IServerAddressProvider hostProvider;
 
     /**
      * 调用方法
@@ -37,7 +37,6 @@ public class SyncCallTask implements Callable<Result> {
     /**
      * 方法参数
      */
-    @NonNull
     private final Object[] args;
 
     @Override

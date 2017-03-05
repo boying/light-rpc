@@ -35,6 +35,11 @@ public class Result {
     private Throwable throwable;
 
     /**
+     * 异常类型
+     */
+    private Class<? extends Throwable> throwableType;
+
+    /**
      * 没有成功调用,返回的错误信息,此错误是框架抛出的错误,而不是实际调用函数中出现的错误
      */
     private String errorMsg;
@@ -58,11 +63,12 @@ public class Result {
      * @param throwable 调用抛出的异常
      * @return
      */
-    public static Result invokedSuccess(Object result, Throwable throwable) {
+    public static Result invokedSuccess(Object result, Throwable throwable, Class<? extends Throwable> throwableType) {
         Result ret = new Result();
         ret.invokedSuccess = true;
         ret.result = result;
         ret.throwable = throwable;
+        ret.throwableType = throwableType;
         return ret;
     }
 

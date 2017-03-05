@@ -1,7 +1,7 @@
 package light.rpc.client;
 
-import light.rpc.protocol.Request;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import light.rpc.protocol.Request;
 import light.rpc.util.json.JacksonHelper;
 
 /**

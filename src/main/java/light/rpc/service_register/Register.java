@@ -14,4 +14,12 @@ public interface Register {
      * @throws Exception
      */
     void register(CommonConf commonConf, ServerConf serverConf) throws Exception;
+
+    /**
+     * 取消服务
+     * @param commonConf 注册中心的conf
+     * @param serverConf 服务的conf
+     * @throws Exception
+     */
+    void unRegister(CommonConf commonConf, ServerConf serverConf) throws Exception;
 }

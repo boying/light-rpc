@@ -1,4 +1,4 @@
-import light.rpc.server_provider.ZooKeeperServerProvider;
+import light.rpc.server_address_provider.ZooKeeperServerAddressProvider;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -17,7 +17,7 @@ public class ZookeeperServerProviderTest {
         System.out.println(inetSocketAddress.getAddress().getHostAddress());
         System.out.println("----------------");
 
-        ZooKeeperServerProvider provider = new ZooKeeperServerProvider(new InetSocketAddress("127.0.0.1", 2181) , "test");
+        ZooKeeperServerAddressProvider provider = new ZooKeeperServerAddressProvider(new InetSocketAddress("127.0.0.1", 2181) , "test");
         provider.init();
 
         while (true){

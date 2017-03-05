@@ -5,32 +5,32 @@
   },
 
   "server":{
-    "appId": "echo",
+    "appId": "foo",
     "protocol": "json",
     "port": 8888,
     "interfaces": [
-      "demo.service.IEcho"
+      "demo.service.IFoo"
     ],
     "threadPoolSize": 123
   },
 
   "clients":[
     {
-      "appId": "echo",
+      "appId": "foo",
       "protocol": "json",
       "threadPoolSize": 123,
-      "methodDefaultTimeoutMillisecond": 123,
+      "methodDefaultTimeoutMillisecond": 1000,
       "serverProviders":[],
       "interfaces": [
         {
-          "name": "demo.service.IEcho",
+          "name": "demo.service.IFoo",
           "methods": [
             {
-              "name": "echo",
+              "name": "sleep",
               "paramTypes": [
-                "java.lang.String"
+                "int"
               ],
-              "timeoutMillisecond": 123
+              "timeoutMillisecond": 1000
             }
           ]
         }

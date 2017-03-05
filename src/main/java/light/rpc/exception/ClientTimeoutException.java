@@ -1,7 +1,7 @@
 package light.rpc.exception;
 
 /**
- * Created by jiangzhiwen on 17/2/21.
+ * 客户端任务超时异常
  */
 public class ClientTimeoutException extends ClientException{
     public ClientTimeoutException() {

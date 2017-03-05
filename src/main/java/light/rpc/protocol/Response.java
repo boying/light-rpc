@@ -35,6 +35,11 @@ public class Response {
     private String throwable;
 
     /**
+     * 异常类型
+     */
+    private String throwableType;
+
+    /**
      * invokedSuccess为false的情况下,报错信息
      */
     private String errorMsg;

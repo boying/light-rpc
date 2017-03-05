@@ -1,9 +1,9 @@
 package light.rpc.client.async;
 
-import light.rpc.protocol.Request;
-import light.rpc.result.Result;
 import light.rpc.exception.ClientException;
 import light.rpc.exception.ServerException;
+import light.rpc.protocol.Request;
+import light.rpc.result.Result;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +26,11 @@ public class AsyncCallFuture<T> implements Future<T> {
      * 异步调用对应的请求对象
      */
     private final Request request;
+
+    /**
+     * 异步调用Future容器
+     */
+    private final AsyncCallFutureContainer futureContainer;
 
     private volatile Result result;
     private volatile ClientException clientException;
@@ -55,6 +60,7 @@ public class AsyncCallFuture<T> implements Future<T> {
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         canceled = true;
+        futureContainer.discardAsyncCallFuture(this);
         return true;
     }
 

@@ -1,14 +1,21 @@
 package light.rpc.server;
 
-import light.rpc.protocol.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import light.rpc.conf.ServerConf;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
+import light.rpc.conf.ServerConf;
+import light.rpc.protocol.AsyncCallAckResponse;
+import light.rpc.protocol.Request;
+import light.rpc.protocol.Response;
 import light.rpc.result.Result;
+import light.rpc.util.ClassUtil;
+import light.rpc.util.CloseableHttpClientFactory;
+import light.rpc.util.FullHttpResponseFactory;
+import light.rpc.util.InetSocketAddressFactory;
+import light.rpc.util.json.JacksonHelper;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -18,11 +25,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import light.rpc.util.ClassUtil;
-import light.rpc.util.CloseableHttpClientFactory;
-import light.rpc.util.FullHttpResponseFactory;
-import light.rpc.util.InetSocketAddressFactory;
-import light.rpc.util.json.JacksonHelper;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -33,18 +35,33 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Created by jiangzhiwen on 17/2/28.
+ * 处理Rpc请求的任务
  */
 @RequiredArgsConstructor
-public class Task implements Runnable {
-    private static final Logger logger = LoggerFactory.getLogger(Task.class);
+public class RpcRequestProcessTask implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(RpcRequestProcessTask.class);
 
+    /**
+     * 服务端配置
+     */
     private final ServerConf serverConf;
+
+    /**
+     * netty ChannelHandlerContext,用于发送response
+     */
     private final ChannelHandlerContext ctx;
+
+    /**
+     * 请求的ByteBuf
+     */
     private final ByteBuf byteBuf;
 
+    /**
+     * 处理请求
+     */
     @Override
     public void run() {
+        // 创建Request对象
         String s = byteBuf.toString(CharsetUtil.UTF_8);
         Request request;
         try {
@@ -55,7 +72,8 @@ public class Task implements Runnable {
             return;
         }
 
-        Class<?> clazz = null;
+        // 获取调用的类
+        Class<?> clazz;
         try {
             clazz = ClassUtil.forName(request.getIface());
         } catch (ClassNotFoundException e) {
@@ -64,6 +82,7 @@ public class Task implements Runnable {
             return;
         }
 
+        // 判断调用的类是在Rpc服务方提供的服务类中
         List<Class<?>> interfaces = serverConf.getInterfaces();
         if (!interfaces.contains(clazz)) {
             invokedFailed("service interface no registered", request);
@@ -71,17 +90,19 @@ public class Task implements Runnable {
             return;
         }
 
+        // 查找实现类对象
         Object serviceBean = serverConf.getServiceBeanProvider().get(clazz);
         if (serviceBean == null) {
-            invokedFailed("service light.rpc.protocol no found", request);
-            logger.warn("service light.rpc.protocol no found");
+            invokedFailed("service no found", request);
+            logger.warn("service found");
             return;
         }
 
+        // 获取调用参数
         List<Class<?>> types = new ArrayList<>();
         List<Object> values = new ArrayList<>();
         for (Request.TypeValue typeValue : request.getArgs()) {
-            Class<?> type = null;
+            Class<?> type;
             try {
                 type = ClassUtil.forName(typeValue.getType());
             } catch (ClassNotFoundException e) {
@@ -91,7 +112,7 @@ public class Task implements Runnable {
             }
             types.add(type);
 
-            Object o = null;
+            Object o;
             try {
                 o = JacksonHelper.getMapper().readValue(typeValue.getValue(), type);
             } catch (IOException e) {
@@ -102,7 +123,8 @@ public class Task implements Runnable {
             values.add(o);
         }
 
-        Method method = null;
+        // 获取调用方法
+        Method method;
         try {
             method = clazz.getMethod(request.getMethod(), Arrays.copyOf(types.toArray(), types.size(), Class[].class));
         } catch (NoSuchMethodException e) {
@@ -111,17 +133,19 @@ public class Task implements Runnable {
             return;
         }
 
+        // 如果是异步任务,则返回AsyncCallAckResponse
         if (request.isAsync()) {
             ctx.writeAndFlush(genHttpResponse(new AsyncCallAckResponse(request.getAsyncReqId(), true, null)));
             logger.debug("send async call ack success");
         }
 
+        // 调用方法
         Result result;
         try {
             Object ret = method.invoke(serviceBean, values.toArray());
-            result = Result.invokedSuccess(ret, null);
+            result = Result.invokedSuccess(ret, null, null);
         } catch (InvocationTargetException e) {
-            result = Result.invokedSuccess(null, e.getCause());
+            result = Result.invokedSuccess(null, e.getCause(), e.getCause().getClass());
         } catch (IllegalAccessException e) {
             result = Result.invokedFailed(e.getMessage());
             logger.warn(e.getMessage());
@@ -130,6 +154,12 @@ public class Task implements Runnable {
         invokedSuccess(result, request);
     }
 
+    /**
+     * 调用成功,返回结果给客户端
+     *
+     * @param result
+     * @param request
+     */
     private void invokedSuccess(Result result, Request request) {
         if (!request.isAsync()) {
             ctx.writeAndFlush(genHttpResponse(result));
@@ -166,6 +196,12 @@ public class Task implements Runnable {
         }
     }
 
+    /**
+     * 调用失败,返回结果给客户端
+     *
+     * @param msg
+     * @param request
+     */
     private void invokedFailed(String msg, Request request) {
         if (request.isAsync()) {
             ctx.writeAndFlush(genHttpResponse(new AsyncCallAckResponse(request.getAsyncReqId(), false, msg)));
@@ -196,7 +232,6 @@ public class Task implements Runnable {
     }
 
     private Response result2Response(Result result) {
-
         Response response = new Response();
         if (result.isAsync()) {
             response.setAsync(true);
@@ -209,9 +244,12 @@ public class Task implements Runnable {
         try {
             response.setResult(JacksonHelper.getMapper().writeValueAsString(result.getResult()));
             response.setThrowable(JacksonHelper.getMapper().writeValueAsString(result.getThrowable()));
+            if (result.getThrowableType() != null) {
+                response.setThrowableType(result.getThrowable().getClass().getName());
+            }
         } catch (Throwable throwable) {
             response.setInvokedSuccess(false);
-            response.setErrorMsg("light.rpc.server error");
+            response.setErrorMsg("server error");
         }
 
         return response;

@@ -1,17 +1,17 @@
 package light.rpc.client;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import light.rpc.client.sync.SyncCallTask;
-import light.rpc.result.Result;
 import light.rpc.client.async.AsyncCallTask;
+import light.rpc.client.sync.SyncCallTask;
 import light.rpc.conf.*;
 import light.rpc.exception.ClientException;
 import light.rpc.exception.ClientTaskRejectedException;
 import light.rpc.exception.ClientTimeoutException;
 import light.rpc.exception.ServerException;
-import light.rpc.server_provider.IServerProvider;
-import light.rpc.server_provider.ListedServerProvider;
-import light.rpc.server_provider.ZooKeeperServerProvider;
+import light.rpc.result.Result;
+import light.rpc.server_address_provider.IServerAddressProvider;
+import light.rpc.server_address_provider.ListedServerAddressProvider;
+import light.rpc.server_address_provider.ZooKeeperServerAddressProvider;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -46,25 +46,39 @@ public class Client {
     @NonNull
     private final ClientConf clientConf;
 
-    private IServerProvider serverProvider;
+    private IServerAddressProvider serverProvider;
     private Map<Class, Object> classObjMap = new HashMap<>();
     private ExecutorService threadPool;
     private Map<Method, Integer> methodTimeoutMap = new HashMap<>();
-    private volatile boolean initialized = false;
+    private volatile boolean started = false;
     private static final int DEFAULT_METHOD_TIMEOUT = 10000;
-    private static final int WAITING_QUEUE_SIZE = 1000;
 
     /**
-     * 初始化
+     * 启动客户端
      *
      * @throws ClassNotFoundException
      */
-    public void init() throws ClassNotFoundException {
+    public void start() throws ClassNotFoundException {
+        if (started) {
+            return;
+        }
+
         initThreadPool();
         initMethodTimeout();
         initServerProvider();
         genProxies();
-        initialized = true;
+        started = true;
+    }
+
+    /**
+     * 关闭客户端
+     */
+    public void close() {
+        if (!started) {
+            return;
+        }
+
+        threadPool.shutdown();
     }
 
     /**
@@ -73,8 +87,8 @@ public class Client {
      * @return key是rpc接口类, value是rpc接口代理对象
      */
     public Map<Class, Object> getProxies() {
-        if (!initialized) {
-            throw new IllegalStateException("client no initialized");
+        if (!started) {
+            throw new IllegalStateException("client no started");
         }
         return this.classObjMap;
     }
@@ -90,20 +104,20 @@ public class Client {
      * @return
      */
     public <T> Future<T> asyncCall(Class clazz, Method method, Object[] args, Class<T> retType) {
-        if (!initialized) {
-            throw new IllegalStateException("client no initialized");
+        if (!started) {
+            throw new IllegalStateException("client no started");
         }
         try {
             return new AsyncCallTask<T>(clazz, method, args, serverProvider, commonConf.getAsyncCallFutureContainer(), commonConf.getAsyncClientPort()).getFuture();
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new ClientException(e);
         }
     }
 
     private void initThreadPool() {
-        String threadNameFormat = "client-" + clientConf.getAppId() + "-thread_pool-thread-%d";
+        String threadNameFormat = "rcp_client-" + clientConf.getAppId() + "-thread_pool-thread-%d";
         threadPool = new ThreadPoolExecutor(0, clientConf.getThreadPoolSize(), 1, TimeUnit.MINUTES,
-                new ArrayBlockingQueue<>(WAITING_QUEUE_SIZE),
+                new SynchronousQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat(threadNameFormat).build());
     }
 
@@ -126,9 +140,9 @@ public class Client {
 
     private void initServerProvider() {
         if (clientConf.getServerProviders() != null && clientConf.getServerProviders().size() > 0) {
-            serverProvider = new ListedServerProvider(clientConf.getServerProviders());
+            serverProvider = new ListedServerAddressProvider(clientConf.getServerProviders());
         } else if (commonConf != null && commonConf.getRegistryAddress() != null) {
-            ZooKeeperServerProvider zooKeeperServerProvider = new ZooKeeperServerProvider(commonConf.getRegistryAddress(), clientConf.getAppId());
+            ZooKeeperServerAddressProvider zooKeeperServerProvider = new ZooKeeperServerAddressProvider(commonConf.getRegistryAddress(), clientConf.getAppId());
             zooKeeperServerProvider.init();
             serverProvider = zooKeeperServerProvider;
         } else {

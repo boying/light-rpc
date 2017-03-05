@@ -1,7 +1,7 @@
 package light.rpc.exception;
 
 /**
- * Created by jiangzhiwen on 17/2/21.
+ * 服务端异常
  */
 public class ServerException extends RuntimeException{
     public ServerException() {

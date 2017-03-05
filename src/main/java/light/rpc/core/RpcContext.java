@@ -7,13 +7,14 @@ import light.rpc.conf.ClientConf;
 import light.rpc.conf.Conf;
 import light.rpc.conf.ConfParser;
 import light.rpc.conf.Protocol;
-import light.rpc.service_register.Register;
-import light.rpc.service_register.ZooKeeperRegister;
 import light.rpc.server.HttpServer;
 import light.rpc.server.Server;
+import light.rpc.service_register.Register;
+import light.rpc.service_register.ZooKeeperRegister;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,9 +30,12 @@ public class RpcContext {
     private Map<Class, Object> classProxyMap = new HashMap<>();
     private Map<Class, Client> classClientMap = new HashMap<>();
     private Conf conf;
-    private volatile boolean initialized = false;
+    private volatile boolean started = false;
     private ServiceBeanProvider serviceBeanProvider;
     private AsyncCallFutureContainer asyncCallFutureContainer = new AsyncCallFutureContainer();
+    private AsyncCallServer asyncCallServer;
+    private Server serviceServer;
+    private List<Client> clients = new ArrayList<>();
 
     /**
      * @param confPath            配置文件路径
@@ -43,32 +47,113 @@ public class RpcContext {
     }
 
     /**
-     * 初始化
+     * 启动容器
      *
      * @throws Exception
      */
-    public void init() throws Exception {
+    public void start() throws Exception {
+        if (started) {
+            throw new IllegalStateException("Rpc Context has been stated");
+        }
+
         parseConf(confPath);
 
         initCommon();
-        initClients();
-        initServer();
+        startClients();
+        startServer();
 
-        initialized = true;
+        started = true;
+
+        logger.debug("RpcContext started");
+    }
+
+    /**
+     * 关闭容器
+     */
+    public void close() {
+        if(!started){
+            return;
+        }
+
+        if(asyncCallServer != null){
+            asyncCallServer.close();
+        }
+
+        if(serviceServer != null){
+            Register register = new ZooKeeperRegister();
+            try {
+                register.unRegister(conf.getCommonConf(), conf.getServerConf());
+            }catch (Exception ignored){}
+
+            serviceServer.close();
+        }
+
+        for (Client client : clients) {
+            client.close();
+        }
+
     }
 
     /**
      * 获取Rpc代理对象
      *
      * @param clazz 需要被代理的class
-     * @param <T>
-     * @return
+     * @param <T>   类型
+     * @return 代理对象
      */
+    @SuppressWarnings("unchecked")
     public <T> T getProxy(Class<T> clazz) {
-        if (!initialized) {
-            throw new IllegalStateException("RpcContext not initialized");
+        if (!started) {
+            throw new IllegalStateException("RpcContext not started");
         }
         return (T) classProxyMap.get(clazz);
+    }
+
+    /**
+     * Rpc异步调用。适用于函数的入参为空,返回值为void的函数
+     *
+     * @param clazz      Rpc调用接口类
+     * @param methodName 方法名
+     * @return 调用结果Future
+     */
+    public Future<Void> asyncCall(Class<?> clazz, String methodName) {
+        return asyncCall(clazz, methodName, new Class[]{}, new Object[]{}, Void.class);
+    }
+
+    /**
+     * Rpc异步调用。适用于函数的入参为空的函数
+     *
+     * @param clazz      Rpc调用接口类
+     * @param methodName 方法名
+     * @param retType    返回值类
+     * @param <T>        返回值类型
+     * @return 调用结果Future
+     */
+    public <T> Future<T> asyncCall(Class<?> clazz, String methodName, Class<T> retType) {
+        return asyncCall(clazz, methodName, new Class[]{}, new Object[]{}, retType);
+    }
+
+    /**
+     * Rpc异步调用
+     *
+     * @param clazz      Rpc调用接口类
+     * @param methodName 方法名
+     * @param argTypes   参数类型列表
+     * @param args       参数值
+     * @param retType    返回值类
+     * @param <T>        返回值类型
+     * @return 调用结果Future
+     */
+    public <T> Future<T> asyncCall(Class<?> clazz, String methodName, Class<?>[] argTypes, Object[] args, Class<T> retType) {
+        if (args.length != argTypes.length) {
+            throw new IllegalArgumentException("argTypes length not equal args length");
+        }
+        Method method = findMethod(clazz, methodName, argTypes);
+        if (method == null) {
+            throw new RuntimeException("method no found");
+        }
+
+        return classClientMap.get(clazz).asyncCall(clazz, method, args, retType);
     }
 
     private void parseConf(String confPath) throws Exception {
@@ -84,22 +169,11 @@ public class RpcContext {
     }
 
     private void initAsyncCallServer() {
-        AsyncCallServer asyncCallServer = new AsyncCallServer(conf.getCommonConf().getAsyncClientPort(), asyncCallFutureContainer);
+        asyncCallServer = new AsyncCallServer(conf.getCommonConf().getAsyncClientPort(), asyncCallFutureContainer);
         asyncCallServer.init();
         asyncCallServer.start();
     }
 
-    public <T> Future<T> asyncCall(Class<?> clazz, String methodName, Class<?>[] argTypes, Object[] args, Class<T> retType) {
-        if (args.length != argTypes.length) {
-            throw new IllegalArgumentException("argTypes length not equal args length");
-        }
-        Method method = findMethod(clazz, methodName, argTypes);
-        if (method == null) {
-            throw new RuntimeException("method no found");
-        }
-
-        return classClientMap.get(clazz).asyncCall(clazz, method, args, retType);
-    }
 
     private Method findMethod(Class clazz, String methodName, Class<?>[] argTypes) {
         Method[] methods = clazz.getMethods();
@@ -120,21 +194,23 @@ public class RpcContext {
         return null;
     }
 
-    private void initServer() throws Exception {
+    private void startServer() throws Exception {
         if (conf.getServerConf() == null) {
             return;
         }
 
-        Server server = genServer();
-        server.init();
-        server.start();
+        serviceServer = genServer();
+        serviceServer.init();
+        serviceServer.start();
 
         registerServiceProvider();
     }
 
     private void registerServiceProvider() throws Exception {
-        Register register = new ZooKeeperRegister();
-        register.register(conf.getCommonConf(), conf.getServerConf());
+        if (conf.getCommonConf().getRegistryAddress() != null) {
+            Register register = new ZooKeeperRegister();
+            register.register(conf.getCommonConf(), conf.getServerConf());
+        }
     }
 
     private Server genServer() {
@@ -145,18 +221,17 @@ public class RpcContext {
         return null;
     }
 
-    private void initClients() throws ClassNotFoundException {
+    private void startClients() throws ClassNotFoundException {
         List<ClientConf> clients = conf.getClientConfs();
         for (ClientConf clientConf : clients) {
             Client client = new Client(conf.getCommonConf(), clientConf);
-            client.init();
+            client.start();
 
+            this.clients.add(client);
             Map<Class, Object> classProxyMap = client.getProxies();
             classProxyMap.keySet().stream().forEach(clazz -> this.classProxyMap.put(clazz, classProxyMap.get(clazz)));
             classProxyMap.keySet().stream().forEach(clazz -> classClientMap.put(clazz, client));
         }
-
     }
-
 
 }

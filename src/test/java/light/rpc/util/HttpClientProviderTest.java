@@ -22,7 +22,7 @@ public class HttpClientProviderTest {
         //HttpClient httpClient = HttpClients.custom().build();
 
         HttpPost post = new HttpPost("http://127.0.0.1:8888");
-        String body = "{\"iface\":\"demo.service.IEcho\",\"method\":\"echo\",\"args\":[{\"type\":\"java.lang.String\",\"value\":\"\\\"haha\\\"\"}]}";
+        String body = "{\"iface\":\"demo.service.IFoo\",\"method\":\"echo\",\"args\":[{\"type\":\"java.lang.String\",\"value\":\"\\\"haha\\\"\"}]}";
         post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
         try {
             HttpResponse rsp = httpClient.execute(post);

@@ -4,8 +4,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import lombok.RequiredArgsConstructor;
 import light.rpc.util.ServerBootstrapFactory;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Created by jiangzhiwen on 17/2/18.

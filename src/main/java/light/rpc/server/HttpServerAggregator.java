@@ -9,7 +9,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 
 /**
- * Created by jiangzhiwen on 17/2/18.
+ * Http Request Aggregator
  */
 @Deprecated
 public class HttpServerAggregator extends ChannelInboundHandlerAdapter {

@@ -1,7 +1,7 @@
+import demo.service.Foo;
+import demo.service.IFoo;
 import light.rpc.core.RpcContext;
 import light.rpc.core.ServiceBeanProvider;
-import demo.service.Echo;
-import demo.service.IEcho;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -14,15 +14,15 @@ public class AsyncCallTest {
         RpcContext context = new RpcContext("Configure.json", new ServiceBeanProvider() {
             @Override
             public <T> T get(Class<T> clazz) {
-                return (T) new Echo();
+                return (T) new Foo();
             }
         });
-        context.init();
+        context.start();
 
 
-        IEcho proxy = context.getProxy(IEcho.class);
+        IFoo proxy = context.getProxy(IFoo.class);
 
-        Future<Integer> future = context.asyncCall(IEcho.class, "sleep", new Class<?>[]{int.class}, new Object[]{1000}, int.class);
+        Future<Integer> future = context.asyncCall(IFoo.class, "sleep", new Class<?>[]{int.class}, new Object[]{1000}, int.class);
         System.out.println("XXXXXXXXXXXXXXXXX");
         Integer integer = future.get(5, TimeUnit.SECONDS);
         System.out.println("XXXXXXXXXXXXXXXXX");

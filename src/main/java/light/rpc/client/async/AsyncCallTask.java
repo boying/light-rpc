@@ -1,18 +1,18 @@
 package light.rpc.client.async;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import light.rpc.protocol.AsyncCallAckResponse;
-import light.rpc.protocol.Request;
 import light.rpc.client.Request2JsonSerializer;
 import light.rpc.client.RequestFactory;
 import light.rpc.client.RequestJsonSender;
 import light.rpc.exception.ClientException;
 import light.rpc.exception.ServerException;
+import light.rpc.protocol.AsyncCallAckResponse;
+import light.rpc.protocol.Request;
+import light.rpc.server_address_provider.IServerAddressProvider;
+import light.rpc.util.json.JacksonHelper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import light.rpc.server_provider.IServerProvider;
-import light.rpc.util.json.JacksonHelper;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.Future;
@@ -43,7 +43,7 @@ public class AsyncCallTask<T> {
     /**
      * rpc服务方提供者
      */
-    private final IServerProvider serverProvider;
+    private final IServerAddressProvider serverProvider;
 
     /**
      * 异步调用Future容器
@@ -57,7 +57,7 @@ public class AsyncCallTask<T> {
 
     public Future<T> getFuture() throws JsonProcessingException {
         Request request = RequestFactory.newRequest(clazz, method, args, true, port);
-        AsyncCallFuture<T> future = new AsyncCallFuture<>(method, request);
+        AsyncCallFuture<T> future = new AsyncCallFuture<>(method, request, asyncCallFutureContainer);
         String jsonReq = Request2JsonSerializer.serialize(request);
         asyncCallFutureContainer.addAsyncCallFuture(future);
         AsyncCallAckResponse asyncCallAckResponse;

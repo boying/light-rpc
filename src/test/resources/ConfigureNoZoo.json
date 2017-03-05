@@ -1,26 +1,24 @@
 {
-  "common":{
-    "registryAddress": "127.0.0.1:2181",
+  "common": {
+    "registryAddress": null,
     "asyncClientPort": 9999
   },
-
-  "server":{
-    "appId": "echo",
+  "server": {
+    "appId": "foo",
     "protocol": "json",
     "port": 8888,
     "interfaces": [
-      "demo.service.IEcho"
+      "demo.service.IFoo"
     ],
     "threadPoolSize": 123
   },
-
-  "clients":[
+  "clients": [
     {
-      "appId": "echo",
+      "appId": "foo",
       "protocol": "json",
       "threadPoolSize": 123,
       "methodDefaultTimeoutMillisecond": 1000,
-      "serverProviders":[
+      "serverProviders": [
         {
           "ip": "127.0.0.1",
           "port": 8888
@@ -28,12 +26,12 @@
       ],
       "interfaces": [
         {
-          "name": "demo.service.IEcho",
+          "name": "demo.service.IFoo",
           "methods": [
             {
-              "name": "echo",
+              "name": "sleep",
               "paramTypes": [
-                "java.lang.String"
+                "int"
               ],
               "timeoutMillisecond": 1000
             }

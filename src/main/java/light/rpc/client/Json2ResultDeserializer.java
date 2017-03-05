@@ -19,7 +19,7 @@ public class Json2ResultDeserializer {
      * @return
      * @throws IOException
      */
-    public static Result deserialize(String json, Class<?> retType) throws IOException {
+    public static Result deserialize(String json, Class<?> retType) throws IOException, ClassNotFoundException {
         if (json == null) {
             throw new IllegalArgumentException("json is null");
         }
@@ -37,12 +37,17 @@ public class Json2ResultDeserializer {
         if (retType != void.class) {
             result = JacksonHelper.getMapper().readValue(response.getResult(), retType);
         } else {
-            result = "null";
+            result = null;
         }
         ret.setResult(result);
 
-        Throwable throwable = JacksonHelper.getMapper().readValue(response.getThrowable(), Throwable.class);
-        ret.setThrowable(throwable);
+        if(response.getThrowableType() != null && !response.getThrowableType().equals("")){
+            Class<?> aClass = Class.forName(response.getThrowableType());
+
+            Throwable throwable = (Throwable) JacksonHelper.getMapper().readValue(response.getThrowable(), aClass);
+            ret.setThrowable(throwable);
+        }
+
         ret.setErrorMsg(response.getErrorMsg());
 
         return ret;
