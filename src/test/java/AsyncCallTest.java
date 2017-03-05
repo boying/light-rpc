@@ -1,9 +1,8 @@
-import core.RpcContext;
-import core.ServiceBeanProvider;
+import light.rpc.core.RpcContext;
+import light.rpc.core.ServiceBeanProvider;
 import demo.service.Echo;
 import demo.service.IEcho;
 
-import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 

@@ -1,7 +1,7 @@
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import util.ServerBootstrapFactory;
+import light.rpc.util.ServerBootstrapFactory;
 
 /**
  * Created by jiangzhiwen on 17/2/18.

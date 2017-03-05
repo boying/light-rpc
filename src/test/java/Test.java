@@ -5,8 +5,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import util.CloseableHttpClientFactory;
-import util.InetSocketAddressFactory;
+import light.rpc.util.CloseableHttpClientFactory;
+import light.rpc.util.InetSocketAddressFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;

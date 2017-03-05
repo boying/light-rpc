@@ -19,7 +19,7 @@
       "appId": "echo",
       "protocol": "json",
       "threadPoolSize": 123,
-      "methodDefaultTimeoutMillisecond": 123,
+      "methodDefaultTimeoutMillisecond": 1000,
       "serverProviders":[
         {
           "ip": "127.0.0.1",
@@ -35,7 +35,7 @@
               "paramTypes": [
                 "java.lang.String"
               ],
-              "timeoutMillisecond": 123
+              "timeoutMillisecond": 1000
             }
           ]
         }

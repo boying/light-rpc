@@ -1,5 +1,4 @@
-import conf.ServerProviderConf;
-import server_provider.ZooKeeperServerProvider;
+import light.rpc.server_provider.ZooKeeperServerProvider;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
