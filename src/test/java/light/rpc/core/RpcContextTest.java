@@ -29,14 +29,14 @@ public class RpcContextTest {
     }
 
     public static void main(String[] args) throws Exception {
-        //syncCallTest();
-        asyncCallTest();
+        syncCallTest();
+        //asyncCallTest();
     }
 
     public static void syncCallTest() throws Exception {
-        IFoo echo = new Foo();
+        IFoo obj = new Foo();
         Map<Class, Object> map = new HashMap<>();
-        map.put(IFoo.class, echo);
+        map.put(IFoo.class, obj);
         MyServiceBeanProvider provider = new MyServiceBeanProvider(map);
 
         // 不使用ZooKeeper注册中心
@@ -48,9 +48,6 @@ public class RpcContextTest {
         context.start();
 
         IFoo foo = context.getProxy(IFoo.class);
-
-        Scanner sc = new Scanner(System.in);
-        sc.nextLine();
 
         System.out.println("foo.toString()");
         String s2 = foo.toString();
@@ -125,9 +122,6 @@ public class RpcContextTest {
         //RpcContext context = new RpcContext("ConfigureZoo.json", provider);
 
         context.start();
-
-        Scanner sc = new Scanner(System.in);
-        sc.nextLine();
 
         System.out.println("foo.echo(\"hello world!\")");
         Future<String> echo1 = context.asyncCall(IFoo.class, "echo", new Class[]{String.class}, new Object[]{"hello world!"}, String.class);
