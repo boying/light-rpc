@@ -8,6 +8,7 @@ import java.net.InetSocketAddress;
 public interface IServerAddressProvider {
     /**
      * 获取Rpc服务地址
+     *
      * @return 服务地址
      */
     InetSocketAddress get();

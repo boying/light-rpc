@@ -9,6 +9,7 @@ import light.rpc.conf.ServerConf;
 public interface Register {
     /**
      * 注册服务
+     *
      * @param commonConf 注册中心的conf
      * @param serverConf 服务的conf
      * @throws Exception
@@ -17,6 +18,7 @@ public interface Register {
 
     /**
      * 取消服务
+     *
      * @param commonConf 注册中心的conf
      * @param serverConf 服务的conf
      * @throws Exception

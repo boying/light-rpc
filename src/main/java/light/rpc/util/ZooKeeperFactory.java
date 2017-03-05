@@ -15,9 +15,10 @@ import java.util.concurrent.TimeUnit;
 public class ZooKeeperFactory {
     /**
      * 创建连接好的ZooKeeper对象
-     * @param zooKeeperAddress ZooKeeper 服务器地址
+     *
+     * @param zooKeeperAddress              ZooKeeper 服务器地址
      * @param connectionTimeoutMilliseconds 连接超时毫秒
-     * @param sessionTimeoutMilliseconds 会话超时毫秒
+     * @param sessionTimeoutMilliseconds    会话超时毫秒
      * @return ZooKeeper对象
      * @throws IOException
      * @throws InterruptedException
@@ -34,7 +35,7 @@ public class ZooKeeperFactory {
             }
         });
 
-        if(!latch.await(connectionTimeoutMilliseconds, TimeUnit.MILLISECONDS)){
+        if (!latch.await(connectionTimeoutMilliseconds, TimeUnit.MILLISECONDS)) {
             throw new RuntimeException("ZooKeeper conn timeout");
         }
 

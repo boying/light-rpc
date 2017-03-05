@@ -16,6 +16,7 @@ public class AsyncCallFutureContainer {
 
     /**
      * 添加一个异步调用Future
+     *
      * @param future
      */
     public void addAsyncCallFuture(AsyncCallFuture<?> future) {
@@ -24,30 +25,30 @@ public class AsyncCallFutureContainer {
 
     /**
      * 根据请求id获取异步调用Future
+     *
      * @param reqId
      * @return
      */
-    public AsyncCallFuture<?> getByReqId(long reqId){
+    public AsyncCallFuture<?> getByReqId(long reqId) {
         return map.get(reqId);
     }
 
     /**
-     *
      * @param future future对象
      */
-    public void discardAsyncCallFuture(AsyncCallFuture<?> future){
+    public void discardAsyncCallFuture(AsyncCallFuture<?> future) {
         map.remove(future.getRequest().getAsyncReqId());
     }
 
     public void discardAsyncCallFuture(Result result) {
         AsyncCallFuture<?> asyncCallFuture = map.get(result.getAsyncReqId());
-        if(asyncCallFuture != null){
+        if (asyncCallFuture != null) {
             asyncCallFuture.setResult(result);
             discardAsyncCallFuture(asyncCallFuture);
         }
     }
 
-    public void discardAsyncCallFuture(AsyncCallFuture<?> future, ClientException clientException){
+    public void discardAsyncCallFuture(AsyncCallFuture<?> future, ClientException clientException) {
         future.setClientException(clientException);
         map.remove(future.getRequest().getAsyncReqId());
     }

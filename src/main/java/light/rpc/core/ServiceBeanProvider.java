@@ -6,6 +6,7 @@ package light.rpc.core;
 public interface ServiceBeanProvider {
     /**
      * 根据class类型,获取class对应的服务对象
+     *
      * @param clazz
      * @param <T>
      * @return

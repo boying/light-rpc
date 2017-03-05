@@ -9,7 +9,7 @@ import java.util.List;
  * Created by jiangzhiwen on 17/2/27.
  */
 @RequiredArgsConstructor
-public class SharedChannelHandlerGenerator implements IChannelHandlerGenerator{
+public class SharedChannelHandlerGenerator implements IChannelHandlerGenerator {
     private final List<ChannelHandler> handlers;
 
     @Override

@@ -24,7 +24,7 @@ public class RequestJsonSender {
      * 发送调用http请求
      *
      * @param addressProvider 服务方提供者
-     * @param body         请求串
+     * @param body            请求串
      * @return
      * @throws IOException
      */

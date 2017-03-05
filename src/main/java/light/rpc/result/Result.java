@@ -59,7 +59,8 @@ public class Result {
 
     /**
      * 创建成功调用的返回结果对象
-     * @param result 调用结果
+     *
+     * @param result    调用结果
      * @param throwable 调用抛出的异常
      * @return
      */

@@ -10,9 +10,10 @@ public class RequestIdGenerator {
 
     /**
      * 生成一个异步调用请求id
+     *
      * @return
      */
-    public static long genId(){
+    public static long genId() {
         return Math.abs(id.incrementAndGet());
     }
 }

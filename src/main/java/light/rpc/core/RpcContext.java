@@ -71,19 +71,20 @@ public class RpcContext {
      * 关闭容器
      */
     public void close() {
-        if(!started){
+        if (!started) {
             return;
         }
 
-        if(asyncCallServer != null){
+        if (asyncCallServer != null) {
             asyncCallServer.close();
         }
 
-        if(serviceServer != null){
+        if (serviceServer != null) {
             Register register = new ZooKeeperRegister();
             try {
                 register.unRegister(conf.getCommonConf(), conf.getServerConf());
-            }catch (Exception ignored){}
+            } catch (Exception ignored) {
+            }
 
             serviceServer.close();
         }

@@ -58,9 +58,9 @@ public class CloseableHttpClientFactory {
     public static CloseableHttpClient getCloseableHttpClient(InetSocketAddress address) {
         CloseableHttpClient httpClient = addressClientMap.get(address);
         if (httpClient == null) {
-            synchronized (addressClientMap){
+            synchronized (addressClientMap) {
                 httpClient = addressClientMap.get(address);
-                if(httpClient == null){
+                if (httpClient == null) {
                     httpClient = genCloseableHttpClient(address);
                     addressClientMap.putIfAbsent(address, httpClient);
                 }

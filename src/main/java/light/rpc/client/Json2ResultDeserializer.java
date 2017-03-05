@@ -41,7 +41,7 @@ public class Json2ResultDeserializer {
         }
         ret.setResult(result);
 
-        if(response.getThrowableType() != null && !response.getThrowableType().equals("")){
+        if (response.getThrowableType() != null && !response.getThrowableType().equals("")) {
             Class<?> aClass = Class.forName(response.getThrowableType());
 
             Throwable throwable = (Throwable) JacksonHelper.getMapper().readValue(response.getThrowable(), aClass);
