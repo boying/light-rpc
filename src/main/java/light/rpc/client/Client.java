@@ -1,30 +1,45 @@
 package light.rpc.client;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import light.rpc.client.async.AsyncCallTask;
-import light.rpc.client.sync.SyncCallTask;
-import light.rpc.conf.*;
+import com.netflix.hystrix.HystrixCommand;
+import com.netflix.hystrix.HystrixCommandGroupKey;
+import com.netflix.hystrix.HystrixCommandKey;
+import com.netflix.hystrix.HystrixCommandProperties;
+import light.rpc.conf.Config;
+import light.rpc.exception.CircuitBreakerException;
 import light.rpc.exception.ClientException;
-import light.rpc.exception.ClientTaskRejectedException;
-import light.rpc.exception.ClientTimeoutException;
-import light.rpc.exception.ServerException;
-import light.rpc.result.Result;
+import light.rpc.protocol.Request;
 import light.rpc.server_address_provider.IServerAddressProvider;
 import light.rpc.server_address_provider.ListedServerAddressProvider;
 import light.rpc.server_address_provider.ZooKeeperServerAddressProvider;
+import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.Consts;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.config.ConnectionConfig;
+import org.apache.http.config.SocketConfig;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.net.InetSocketAddress;
+import java.nio.charset.CodingErrorAction;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.*;
 
 /**
  * 客户端类
@@ -38,47 +53,69 @@ public class Client {
      * 通用参数
      */
     @NonNull
-    private final CommonConf commonConf;
+    private final Config.Registry registry;
 
     /**
      * 客户端参数
      */
     @NonNull
-    private final ClientConf clientConf;
+    private final Config.Client clientConf;
 
     private IServerAddressProvider serverProvider;
+    private CloseableHttpClient httpClient;
+    private RequestConfig defaultRequestConfig;
     private Map<Class, Object> classObjMap = new HashMap<>();
-    private ExecutorService threadPool;
     private Map<Method, Integer> methodTimeoutMap = new HashMap<>();
+
     private volatile boolean started = false;
     private static final int DEFAULT_METHOD_TIMEOUT = 10000;
+    private static final int POOL_SIZE = 100;
 
     /**
      * 启动客户端
      *
      * @throws ClassNotFoundException
      */
-    public void start() throws ClassNotFoundException {
+    public void init() throws ClassNotFoundException {
         if (started) {
             return;
         }
 
-        initThreadPool();
         initMethodTimeout();
         initServerProvider();
+        initHttpClient();
         genProxies();
         started = true;
     }
 
-    /**
-     * 关闭客户端
-     */
-    public void close() {
-        if (!started) {
-            return;
-        }
+    private void initHttpClient() {
+        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+        connManager.setMaxTotal(POOL_SIZE);
+        connManager.setDefaultMaxPerRoute(POOL_SIZE);
+        connManager.setValidateAfterInactivity(60000);
 
-        threadPool.shutdown();
+        // Create socket configuration
+        SocketConfig socketConfig = SocketConfig.custom()
+                .setTcpNoDelay(true)
+                .setSoKeepAlive(true)
+                .build();
+        connManager.setDefaultSocketConfig(socketConfig);
+
+        // Create connection configuration
+        ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                .setMalformedInputAction(CodingErrorAction.IGNORE)
+                .setUnmappableInputAction(CodingErrorAction.IGNORE)
+                .setCharset(Consts.UTF_8)
+                .build();
+        connManager.setDefaultConnectionConfig(connectionConfig);
+
+        defaultRequestConfig = RequestConfig.custom()
+                .setSocketTimeout(1000)
+                .setConnectTimeout(1000)
+                .setConnectionRequestTimeout(1000)
+                .build();
+
+        this.httpClient = HttpClients.custom().setConnectionManager(connManager).setDefaultRequestConfig(defaultRequestConfig).build();
     }
 
     /**
@@ -93,44 +130,17 @@ public class Client {
         return this.classObjMap;
     }
 
-    /**
-     * 异步调用
-     *
-     * @param clazz   异步调用目标类
-     * @param method  异步调用的方法
-     * @param args    方法参数值
-     * @param retType 返回值类型
-     * @param <T>
-     * @return
-     */
-    public <T> Future<T> asyncCall(Class clazz, Method method, Object[] args, Class<T> retType) {
-        if (!started) {
-            throw new IllegalStateException("client no started");
-        }
-        try {
-            return new AsyncCallTask<T>(clazz, method, args, serverProvider, commonConf.getAsyncCallFutureContainer(), commonConf.getAsyncClientPort()).getFuture();
-        } catch (Exception e) {
-            throw new ClientException(e);
-        }
-    }
-
-    private void initThreadPool() {
-        String threadNameFormat = "rcp_client-" + clientConf.getAppId() + "-thread_pool-thread-%d";
-        threadPool = new ThreadPoolExecutor(0, clientConf.getThreadPoolSize(), 1, TimeUnit.MINUTES,
-                new SynchronousQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat(threadNameFormat).build());
-    }
 
     private void initMethodTimeout() {
         int defaultTimeout = Optional.ofNullable(clientConf.getMethodDefaultTimeoutMillisecond()).orElse(DEFAULT_METHOD_TIMEOUT);
-        for (InterfaceConf interfaceConf : clientConf.getInterfaces()) {
+        for (Config.Interface interfaceConf : clientConf.getInterfaces()) {
             Class clazz = interfaceConf.getClazz();
             Method[] methods = clazz.getMethods();
             for (Method method : methods) {
                 methodTimeoutMap.put(method, defaultTimeout);
             }
 
-            for (MethodConf methodConf : interfaceConf.getMethodConfs()) {
+            for (Config.Method methodConf : interfaceConf.getMethods()) {
                 if (methodConf.getTimeoutMillisecond() != null) {
                     methodTimeoutMap.put(methodConf.getMethod(), methodConf.getTimeoutMillisecond());
                 }
@@ -141,8 +151,8 @@ public class Client {
     private void initServerProvider() {
         if (clientConf.getServerProviders() != null && clientConf.getServerProviders().size() > 0) {
             serverProvider = new ListedServerAddressProvider(clientConf.getServerProviders());
-        } else if (commonConf != null && commonConf.getRegistryAddress() != null) {
-            ZooKeeperServerAddressProvider zooKeeperServerProvider = new ZooKeeperServerAddressProvider(commonConf.getRegistryAddress(), clientConf.getAppId());
+        } else if (registry != null && registry.getAddress() != null) {
+            ZooKeeperServerAddressProvider zooKeeperServerProvider = new ZooKeeperServerAddressProvider(registry.getAddress(), clientConf.getAppId());
             zooKeeperServerProvider.init();
             serverProvider = zooKeeperServerProvider;
         } else {
@@ -151,15 +161,15 @@ public class Client {
     }
 
     private void genProxies() throws ClassNotFoundException {
-        List<InterfaceConf> interfaceConfs = clientConf.getInterfaces();
-        for (InterfaceConf interfaceConf : interfaceConfs) {
+        List<Config.Interface> interfaceConfs = clientConf.getInterfaces();
+        for (Config.Interface interfaceConf : interfaceConfs) {
             Class<?> clazz = interfaceConf.getClazz();
             classObjMap.put(clazz, genProxy(clazz, interfaceConf));
         }
     }
 
-    private Object genProxy(Class iface, InterfaceConf conf) {
-        return Proxy.newProxyInstance(Client.class.getClassLoader(), new Class[]{iface}, new Handler(iface, clientConf.getProtocol()));
+    private Object genProxy(Class iface, Config.Interface conf) {
+        return Proxy.newProxyInstance(Client.class.getClassLoader(), new Class[]{iface}, new Handler(iface));
     }
 
     /**
@@ -167,11 +177,9 @@ public class Client {
      */
     private class Handler implements InvocationHandler {
         private Class<?> proxyClass;
-        private Protocol protocol;
 
-        public Handler(Class<?> proxyClass, Protocol protocol) {
+        public Handler(Class<?> proxyClass) {
             this.proxyClass = proxyClass;
-            this.protocol = protocol;
         }
 
         @Override
@@ -179,43 +187,103 @@ public class Client {
             if (method.getDeclaringClass() == Object.class) {
                 return method.invoke(proxyClass, args);
             }
-            int methodTimeout = methodTimeoutMap.get(method);
-            Future<Result> resultFuture;
-            long start = System.currentTimeMillis();
-            try {
-                resultFuture = threadPool.submit(newTask(method, args));
-            } catch (RejectedExecutionException e) {
-                logger.warn("client thread pool full");
-                throw new ClientTaskRejectedException("client thread pool full");
-            }
-            Result result;
-            try {
-                result = resultFuture.get(methodTimeout, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                throw new ClientTimeoutException();
-            } catch (Exception e) {
-                throw new ClientException(e);
-            } finally {
-                logger.debug("cost " + (System.currentTimeMillis() - start) + " mills");
-                resultFuture.cancel(true);
-            }
-
-            if (result.isInvokedSuccess()) {
-                if (result.getThrowable() == null) {
-                    return result.getResult();
-                } else {
-                    throw result.getThrowable();
-                }
+            CommandResult result = new CallMethodCommand(method, args).execute();
+            if (result.getException() == null) {
+                return result.getResult();
             } else {
-                throw new ServerException(result.getErrorMsg());
+                throw result.getException();
+            }
+        }
+    }
+
+    @Data
+    private static class CommandResult {
+        public CommandResult(Object result, Exception exception) {
+            this.result = result;
+            this.exception = exception;
+        }
+
+        private Object result;
+        private Exception exception;
+    }
+
+    private class CallMethodCommand extends HystrixCommand<CommandResult> {
+        private Method method;
+        private Object[] args;
+        private Exception exception = null;
+
+        public CallMethodCommand(Method method, Object[] args) {
+            super(Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey("" + Client.this.hashCode()))
+                    .andCommandKey(HystrixCommandKey.Factory.asKey(method.getName()))
+                    .andCommandPropertiesDefaults(HystrixCommandProperties.Setter()
+                            .withCircuitBreakerRequestVolumeThreshold(10)////至少有10个请求，熔断器才进行错误率的计算
+                            .withCircuitBreakerSleepWindowInMilliseconds(5000)//熔断器中断请求5秒后会进入半打开状态,放部分流量过去重试
+                            .withCircuitBreakerErrorThresholdPercentage(50)//错误率达到50开启熔断保护
+                            .withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.SEMAPHORE)
+                            .withExecutionTimeoutEnabled(false)
+                            .withExecutionIsolationSemaphoreMaxConcurrentRequests(10)));
+
+            this.method = method;
+            this.args = args;
+        }
+
+        @Override
+        protected CommandResult run() {
+            try {
+                return new CommandResult(invokeMethod(method, args), null);
+            } catch (Exception e) {
+                exception = new ClientException(e);
+                throw e;
             }
         }
 
-        private Callable newTask(Method method, Object[] args) {
-            if (protocol == Protocol.JSON) {
-                return new SyncCallTask(serverProvider, method, args);
+
+        @Override
+        protected CommandResult getFallback() {
+            return new CommandResult(null, exception == null ? new CircuitBreakerException() : exception);
+        }
+    }
+
+    private Object invokeMethod(Method method, Object[] args) throws ClientException {
+        try {
+            return getResult(method, args);
+        } catch (Exception e) {
+            throw new ClientException(e);
+        }
+    }
+
+    private Object getResult(Method method, Object[] args) throws IOException, ClassNotFoundException {
+        Request request = RequestFactory.newRequest(method, args);
+        String body = Request2JsonSerializer.serialize(request);
+        logger.debug("request is {}", body);
+
+        InetSocketAddress serverProviderAddress = this.serverProvider.get();
+
+        HttpPost post = new HttpPost("http://" + serverProviderAddress.getHostName() + ":" + serverProviderAddress.getPort());
+        post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
+        post.setConfig(RequestConfig.copy(defaultRequestConfig)
+                .setSocketTimeout(methodTimeoutMap.get(method))
+                .build());
+        logger.debug("post req is {}", post);
+
+
+        String rsp;
+        try (CloseableHttpResponse response = httpClient.execute(post)) {
+            logger.debug("rsp is {}", response);
+
+            if (response.getStatusLine().getStatusCode() != 200) {
+                throw new RuntimeException(String.format("response code is %s, not 200", response.getStatusLine().getStatusCode())); // TODO
             }
+
+            rsp = EntityUtils.toString(response.getEntity());
+        }
+        // post.releaseConnection(); // TOOD ??
+
+        logger.debug("response is {}", rsp);
+        if (StringUtils.isEmpty(rsp)) {
             return null;
+        } else {
+            return Json2ResultDeserializer.deserialize(rsp, method.getReturnType());
         }
     }
 

@@ -5,6 +5,6 @@ package light.rpc.conf;
  */
 public class ConfParserTest {
     public static void main(String[] args) throws Exception {
-        Conf conf = ConfParser.parseByPath("Configure.json");
+        Config conf = ConfParser.parseByPath("Configure.json");
     }
 }

@@ -1,0 +1,42 @@
+{
+  "common": {
+    "address": null,
+  },
+  "server": {
+    "appId": "foo",
+    "protocol": "json",
+    "port": 8888,
+    "interfaces": [
+      "demo.service.IFoo"
+    ],
+    "threadPoolSize": 123
+  },
+  "clients": [
+    {
+      "appId": "foo",
+      "protocol": "json",
+      "connectionPoolSize": 123,
+      "methodDefaultTimeoutMillisecond": 1000,
+      "serverProviders": [
+        {
+          "ip": "127.0.0.1",
+          "port": 8888
+        }
+      ],
+      "interfaces": [
+        {
+          "name": "demo.service.IFoo",
+          "methods": [
+            {
+              "name": "sleep",
+              "paramTypes": [
+                "int"
+              ],
+              "timeoutMillisecond": 1000
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

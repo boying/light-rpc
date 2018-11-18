@@ -11,21 +11,6 @@ import java.util.List;
 @Data
 public class Request {
     /**
-     * 是否是异步调用
-     */
-    private boolean async;
-
-    /**
-     * 异步调用的请求id
-     */
-    private long asyncReqId;
-
-    /**
-     * 异步调用接收response的端口
-     */
-    private int asyncPort;
-
-    /**
      * rpc调用类完整名
      */
     private String iface;
@@ -38,7 +23,7 @@ public class Request {
     /**
      * rpc调用的方法参数描述
      */
-    private List<TypeValue> args;
+    private List<TypeValue> args; // TODO TypeValue --> String
 
     /**
      * 方法参数描述类

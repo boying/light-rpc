@@ -1,53 +1,25 @@
-package light.rpc.core;
+package spring;
 
-import demo.service.Foo;
 import demo.service.IFoo;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
- * Created by jiangzhiwen on 17/2/21.
+ * Created by boying on 2018/11/12.
  */
-public class RpcContextTest {
-    public static class MyServiceBeanProvider implements ServiceBeanProvider {
-        private Map<Class, Object> map;
-
-        public MyServiceBeanProvider(Map<Class, Object> map) {
-            this.map = map;
+public class SpringTest {
+    public static void main(String[] args) {
+        ApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+        String[] beanNamesForType = context.getBeanNamesForType(IFoo.class);
+        for (String s : beanNamesForType) {
+            System.out.println(s);
         }
 
-        @Override
-        @SuppressWarnings("unchecked")
-        public <T> T get(Class<T> clazz) {
-            return (T) map.get(clazz);
-        }
+        IFoo foo = (IFoo)context.getBean("lightRpcClient_1_IFoo");
+        test(foo);
     }
 
-    public static void main(String[] args) throws Exception {
-        syncCallTest();
-    }
-
-    public static void syncCallTest() throws Exception {
-        IFoo obj = new Foo();
-        Map<Class, Object> map = new HashMap<>();
-        map.put(IFoo.class, obj);
-        MyServiceBeanProvider provider = new MyServiceBeanProvider(map);
-
-        // 不使用ZooKeeper注册中心
-        RpcContext context = new RpcContext("ConfigureNoZoo_gai.json", provider);
-
-        // 使用ZooKeeper注册中心
-        //RpcContext context = new RpcContext("ConfigureZoo.json", provider);
-
-        context.start(true);
-
-        IFoo foo = context.getProxy(IFoo.class);
-
+    public static void test(IFoo foo){
         System.out.println("foo.toString()");
         String s2 = foo.toString();
         System.out.println(s2);
@@ -106,8 +78,5 @@ public class RpcContextTest {
 
         System.out.println("foo.defaultFunc()");
         System.out.println(foo.defaultFunc());
-
-        context.close();
     }
-
 }

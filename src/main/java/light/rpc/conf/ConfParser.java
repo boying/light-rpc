@@ -1,17 +1,18 @@
 package light.rpc.conf;
 
-import light.rpc.conf.bean.*;
 import light.rpc.util.ClassUtil;
 import light.rpc.util.InetSocketAddressFactory;
 import light.rpc.util.json.JacksonHelper;
+import org.springframework.beans.factory.parsing.PassThroughSourceExtractor;
 
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -26,13 +27,12 @@ public class ConfParser {
      * @return
      * @throws Exception
      */
-    public static Conf parseByPath(String path) throws Exception {
+    public static Config parseByPath(String path) throws Exception {
         Path p;
         if (path.startsWith("/")) {
             p = FileSystems.getDefault().getPath(path);
         } else {
-            URL resource = ConfParser.class.getClassLoader().getResource(path);
-            p = FileSystems.getDefault().getPath(resource.getPath());
+            p = Paths.get(ConfParser.class.getClassLoader().getResource(path).toURI());
         }
         String jsonStr = new String(Files.readAllBytes(p));
         return parse(jsonStr);
@@ -45,23 +45,27 @@ public class ConfParser {
      * @return
      * @throws Exception
      */
-    public static Conf parse(String jsonStr) throws Exception {
-        light.rpc.conf.bean.Conf conf = JacksonHelper.getMapper().readValue(jsonStr, light.rpc.conf.bean.Conf.class);
+    public static Config parse(String jsonStr) throws Exception {
+        RawConfig config = JacksonHelper.getMapper().readValue(jsonStr, RawConfig.class);
+        return parse(config);
+    }
 
-        Conf ret = new Conf();
-        ret.setCommonConf(parseCommonConf(conf.getCommon()));
-        ret.setClientConfs(parseClientConfs(conf.getClients()));
-        ret.setServerConf(parseServerConf(conf.getServer()));
+    public static Config parse(RawConfig rawConfig) throws NoSuchMethodException, ClassNotFoundException {
+        Config ret = new Config();
+        ret.setRegistry(parseRegistry(rawConfig.getRegistry()));
+        ret.setClients(parseClients(rawConfig.getClients()));
+        ret.setServer(parseServer(rawConfig.getServer()));
+        ret.setRawConfig(rawConfig);
 
         return ret;
     }
 
-    private static ServerConf parseServerConf(Server server) throws ClassNotFoundException {
+    private static Config.Server parseServer(RawConfig.Server server) throws ClassNotFoundException {
         if (server == null) {
             return null;
         }
 
-        ServerConf ret = new ServerConf();
+        Config.Server ret = new Config.Server();
         ret.setAppId(server.getAppId());
         ret.setProtocol(parseProtocol(server.getProtocol()));
         ret.setPort(server.getPort());
@@ -78,65 +82,69 @@ public class ConfParser {
         return ret;
     }
 
-    private static List<ClientConf> parseClientConfs(List<Client> clients) throws ClassNotFoundException, NoSuchMethodException {
-        if (clients == null || clients.size() == 0) {
+    private static List<Config.Client> parseClients(List<RawConfig.Client> raws) throws ClassNotFoundException, NoSuchMethodException {
+        if (raws == null || raws.size() == 0) {
             return Collections.emptyList();
         }
 
-        List<ClientConf> ret = new ArrayList<>();
-        for (Client client : clients) {
-            ret.add(parseClientConf(client));
+        List<Config.Client> ret = new ArrayList<>();
+        for (RawConfig.Client client : raws) {
+            ret.add(parseClient(client));
         }
 
         return ret;
     }
 
-    private static ClientConf parseClientConf(Client client) throws ClassNotFoundException, NoSuchMethodException {
-        if (client == null) {
-            throw new IllegalArgumentException("light.rpc.client is null");
+    private static Config.Client parseClient(RawConfig.Client rawClient) throws ClassNotFoundException, NoSuchMethodException {
+        if (rawClient == null) {
+            throw new IllegalArgumentException("light.rpc.rawClient is null");
         }
 
-        ClientConf ret = new ClientConf();
-        ret.setAppId(client.getAppId());
-        ret.setThreadPoolSize(client.getThreadPoolSize());
-        ret.setMethodDefaultTimeoutMillisecond(client.getMethodDefaultTimeoutMillisecond());
-        List<InterfaceConf> interfaceConfs = new ArrayList<>();
-        ret.setProtocol(parseProtocol(client.getProtocol()));
+        Config.Client ret = new Config.Client();
+        ret.setAppId(rawClient.getAppId());
+        ret.setMethodDefaultTimeoutMillisecond(rawClient.getMethodDefaultTimeoutMillisecond());
+        List<Config.Interface> interfaceConfs = new ArrayList<>();
+        ret.setProtocol(parseProtocol(rawClient.getProtocol()));
         ret.setInterfaces(interfaceConfs);
         List<InetSocketAddress> serverProviders = new ArrayList<>();
         ret.setServerProviders(serverProviders);
 
-        for (Interface anInterface : client.getInterfaces()) {
-            InterfaceConf interfaceConf = new InterfaceConf();
+        for (RawConfig.Interface anInterface : rawClient.getInterfaces()) {
+            Config.Interface interfaceConf = new Config.Interface();
             interfaceConfs.add(interfaceConf);
 
             interfaceConf.setClazz(ClassUtil.forName(anInterface.getName()));
-            List<MethodConf> methodConfs = new ArrayList<>();
-            interfaceConf.setMethodConfs(methodConfs);
+            List<Config.Method> methods = new ArrayList<>();
+            interfaceConf.setMethods(methods);
 
-            for (Method method : anInterface.getMethods()) {
-                MethodConf methodConf = new MethodConf();
-                methodConfs.add(methodConf);
+            for (RawConfig.Method rawMethod : anInterface.getMethods()) {
+                Config.Method method = new Config.Method();
+                methods.add(method);
 
                 Class clazz = interfaceConf.getClazz();
-                List<Class<?>> types = new ArrayList<>();
-                for (String type : method.getParamTypes()) {
-                    types.add(ClassUtil.forName(type));
-                }
 
-                java.lang.reflect.Method method1 = clazz.getMethod(method.getName(), Arrays.copyOf(types.toArray(), types.size(), Class[].class));
-                methodConf.setMethod(method1);
-                methodConf.setTimeoutMillisecond(method.getTimeoutMillisecond());
+                method.setMethod(getMethodByName(clazz, rawMethod.getName()));
+                method.setTimeoutMillisecond(rawMethod.getTimeoutMillisecond());
             }
         }
 
-        if (client.getServerProviders() != null) {
-            for (IpPort ipPort : client.getServerProviders()) {
+        if (rawClient.getServerProviders() != null) {
+            for (RawConfig.IpPort ipPort : rawClient.getServerProviders()) {
                 serverProviders.add(InetSocketAddressFactory.get(ipPort.getIp(), ipPort.getPort()));
             }
         }
 
         return ret;
+    }
+
+    private static Method getMethodByName(Class clazz, String methodName) {
+        Method[] methods = clazz.getMethods();
+        for (Method method : methods) {
+            if (method.getName().equals(methodName)) {
+                return method;
+            }
+        }
+        throw new IllegalStateException("not find method " + methodName);
     }
 
     private static Protocol parseProtocol(String protocol) {
@@ -146,16 +154,15 @@ public class ConfParser {
         throw new RuntimeException("invalid protocol " + protocol);
     }
 
-    private static CommonConf parseCommonConf(Common common) {
-        if (common == null) {
-            throw new RuntimeException("common light.rpc.conf is null");
+    private static Config.Registry parseRegistry(RawConfig.Registry raw) {
+        if (raw == null) {
+            throw new RuntimeException("raw light.rpc.conf is null");
         }
 
-        CommonConf ret = new CommonConf();
-        if (common.getRegistryAddress() != null) {
-            ret.setRegistryAddress(InetSocketAddressFactory.get(common.getRegistryAddress()));
+        Config.Registry ret = new Config.Registry();
+        if (raw.getAddress() != null) {
+            ret.setAddress(InetSocketAddressFactory.get(raw.getAddress()));
         }
-        ret.setAsyncClientPort(common.getAsyncClientPort());
         return ret;
     }
 

@@ -2,6 +2,7 @@ package light.rpc.client;
 
 import light.rpc.server_address_provider.IServerAddressProvider;
 import light.rpc.util.CloseableHttpClientFactory;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
@@ -30,14 +31,18 @@ public class RequestJsonSender {
      */
     public static String send(IServerAddressProvider addressProvider, String body) throws IOException {
         InetSocketAddress serverProviderAddress = addressProvider.get();
-        CloseableHttpClient httpClient = CloseableHttpClientFactory.getCloseableHttpClient(serverProviderAddress);
+        CloseableHttpClient httpClient = CloseableHttpClientFactory.getCloseableHttpClient(serverProviderAddress); // 内存溢出
 
         HttpPost post = new HttpPost("http://" + serverProviderAddress.getHostName() + ":" + serverProviderAddress.getPort());
         post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
+        post.setConfig(RequestConfig.copy(null) // TODO CloseableHttpClientFactory's default config
+                .setSocketTimeout(15000)
+                .build());
         logger.debug("post req is {}", post);
         CloseableHttpResponse rsp = httpClient.execute(post);
         logger.debug("rsp is {}", rsp);
         String ret = EntityUtils.toString(rsp.getEntity());
+        post.releaseConnection(); // TOOD ??
         rsp.close();
         return ret;
     }

@@ -17,7 +17,7 @@ public class AsyncCallTest {
                 return (T) new Foo();
             }
         });
-        context.start();
+        context.start(true);
 
 
         IFoo proxy = context.getProxy(IFoo.class);

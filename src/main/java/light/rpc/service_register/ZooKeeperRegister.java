@@ -1,7 +1,6 @@
 package light.rpc.service_register;
 
-import light.rpc.conf.CommonConf;
-import light.rpc.conf.ServerConf;
+import light.rpc.conf.Config;
 import light.rpc.util.ZooKeeperFactory;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs;
@@ -30,8 +29,8 @@ public class ZooKeeperRegister implements Register {
     private static final String APP_ROOT_PATH = "/app_root/";
 
     @Override
-    public void register(CommonConf commonConf, ServerConf serverConf) throws Exception {
-        ZooKeeper zooKeeper = ZooKeeperFactory.getZooKeeper(commonConf.getRegistryAddress(), CONNECTION_TIMEOUT_MILLISECONDS, SESSION_TIMEOUT_MILLISECONDS);
+    public void register(Config.Registry commonConf, Config.Server serverConf) throws Exception {
+        ZooKeeper zooKeeper = ZooKeeperFactory.getZooKeeper(commonConf.getAddress(), CONNECTION_TIMEOUT_MILLISECONDS, SESSION_TIMEOUT_MILLISECONDS);
         String appPath = APP_ROOT_PATH + serverConf.getAppId();
         Stat exists = zooKeeper.exists(appPath, false);
         if (exists == null) {
@@ -51,8 +50,8 @@ public class ZooKeeperRegister implements Register {
     }
 
     @Override
-    public void unRegister(CommonConf commonConf, ServerConf serverConf) throws Exception {
-        ZooKeeper zooKeeper = ZooKeeperFactory.getZooKeeper(commonConf.getRegistryAddress(), CONNECTION_TIMEOUT_MILLISECONDS, SESSION_TIMEOUT_MILLISECONDS);
+    public void unRegister(Config.Registry commonConf,  Config.Server  serverConf) throws Exception {
+        ZooKeeper zooKeeper = ZooKeeperFactory.getZooKeeper(commonConf.getAddress(), CONNECTION_TIMEOUT_MILLISECONDS, SESSION_TIMEOUT_MILLISECONDS);
         String appPath = APP_ROOT_PATH + serverConf.getAppId();
         Stat exists = zooKeeper.exists(appPath, false);
         if (exists == null) {

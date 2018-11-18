@@ -6,30 +6,18 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
-import light.rpc.conf.ServerConf;
-import light.rpc.protocol.AsyncCallAckResponse;
+import light.rpc.conf.Config;
 import light.rpc.protocol.Request;
-import light.rpc.protocol.Response;
-import light.rpc.result.Result;
 import light.rpc.util.ClassUtil;
-import light.rpc.util.CloseableHttpClientFactory;
 import light.rpc.util.FullHttpResponseFactory;
-import light.rpc.util.InetSocketAddressFactory;
 import light.rpc.util.json.JacksonHelper;
 import lombok.RequiredArgsConstructor;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -44,7 +32,7 @@ public class RpcRequestProcessTask implements Runnable {
     /**
      * 服务端配置
      */
-    private final ServerConf serverConf;
+    private final Config.Server serverConf;
 
     /**
      * netty ChannelHandlerContext,用于发送response
@@ -133,68 +121,42 @@ public class RpcRequestProcessTask implements Runnable {
             return;
         }
 
-        // 如果是异步任务,则返回AsyncCallAckResponse
-        if (request.isAsync()) {
-            ctx.writeAndFlush(genHttpResponse(new AsyncCallAckResponse(request.getAsyncReqId(), true, null)));
-            logger.debug("send async call ack success");
-        }
-
-        // 调用方法
-        Result result;
         try {
             Object ret = method.invoke(serviceBean, values.toArray());
-            result = Result.invokedSuccess(ret, null, null);
+            invokedSuccess(ret);
         } catch (InvocationTargetException e) {
-            result = Result.invokedSuccess(null, e.getCause(), e.getCause().getClass());
+            serverError();
         } catch (IllegalAccessException e) {
-            result = Result.invokedFailed(e.getMessage());
-            logger.warn(e.getMessage());
+            badRequest();
+        } catch ( IllegalArgumentException e) {
+            badRequest();
+        } catch (Exception e) {
+            serverError();
         }
-
-        invokedSuccess(result, request);
     }
 
     /**
      * 调用成功,返回结果给客户端
      *
      * @param result
-     * @param request
      */
-    private void invokedSuccess(Result result, Request request) {
-        if (!request.isAsync()) {
-            ctx.writeAndFlush(genHttpResponse(result));
-            logger.debug("send sync call result success");
-        } else {
-            String hostName = ((InetSocketAddress) ctx.channel().remoteAddress()).getHostName();
-            int port = request.getAsyncPort();
-            CloseableHttpClient httpClient = CloseableHttpClientFactory.getCloseableHttpClient(
-                    InetSocketAddressFactory.get(hostName, port));
-
-
-            result.setAsync(true);
-            result.setAsyncReqId(request.getAsyncReqId());
-            Response response = result2Response(result);
-            String body = "";
-            try {
-                body = JacksonHelper.getMapper().writeValueAsString(response);
-            } catch (JsonProcessingException e) {
-                logger.warn(e.getMessage());
-            }
-
-            HttpPost post = new HttpPost("http://" + hostName + ":" + port);
-            post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
-            try (CloseableHttpResponse rsp = httpClient.execute(post)) {
-                int status = rsp.getStatusLine().getStatusCode();
-                if (status != HttpStatus.SC_OK) {
-                    logger.warn("send async call result success, response is {}, but receive no OK ack");
-                } else {
-                    logger.debug("send async call result success, response is {}", body);
-                }
-            } catch (Exception e) {
-                logger.warn("send async call result failed, ", e);
-            }
-        }
+    private void invokedSuccess(Object result) {
+        ctx.writeAndFlush(genHttpResponse(result));
+        logger.debug("send sync call result success");
     }
+
+    private void notFound() {
+        ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.NOT_FOUND));
+    }
+
+    private void serverError(){
+        ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR));
+    }
+
+    private void badRequest(){
+        ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.BAD_REQUEST));
+    }
+
 
     /**
      * 调用失败,返回结果给客户端
@@ -203,71 +165,21 @@ public class RpcRequestProcessTask implements Runnable {
      * @param request
      */
     private void invokedFailed(String msg, Request request) {
-        if (request.isAsync()) {
-            ctx.writeAndFlush(genHttpResponse(new AsyncCallAckResponse(request.getAsyncReqId(), false, msg)));
-            logger.debug("send async call ack, invoke failed");
-        } else {
-            Result result = new Result();
-            result.setInvokedSuccess(false);
-            result.setAsync(false);
-            result.setErrorMsg(msg);
-
-            ctx.writeAndFlush(genHttpResponse(result));
-            logger.debug("send sync call ack, invoke failed");
-        }
+        serverError();
     }
 
-    private FullHttpResponse genHttpResponse(AsyncCallAckResponse asyncCallAckResponse) {
+
+    private FullHttpResponse genHttpResponse(Object result) {
         String content = "";
         String contentType = "application/json; charset=utf-8";
-        HttpResponseStatus status = HttpResponseStatus.OK;
 
         try {
-            content = JacksonHelper.getMapper().writeValueAsString(asyncCallAckResponse);
-        } catch (Throwable throwable) {
-        }
-
-        FullHttpResponse ret = FullHttpResponseFactory.newFullHttpResponse(status, contentType, content.getBytes(CharsetUtil.UTF_8));
-        return ret;
-    }
-
-    private Response result2Response(Result result) {
-        Response response = new Response();
-        if (result.isAsync()) {
-            response.setAsync(true);
-            response.setAsyncReqId(result.getAsyncReqId());
-        } else {
-            response.setAsync(false);
-        }
-        response.setInvokedSuccess(result.isInvokedSuccess());
-        response.setErrorMsg(result.getErrorMsg());
-        try {
-            response.setResult(JacksonHelper.getMapper().writeValueAsString(result.getResult()));
-            response.setThrowable(JacksonHelper.getMapper().writeValueAsString(result.getThrowable()));
-            if (result.getThrowableType() != null) {
-                response.setThrowableType(result.getThrowable().getClass().getName());
-            }
-        } catch (Throwable throwable) {
-            response.setInvokedSuccess(false);
-            response.setErrorMsg("server error");
-        }
-
-        return response;
-    }
-
-    private FullHttpResponse genHttpResponse(Result result) {
-        String content = "";
-        String contentType = "application/json; charset=utf-8";
-        HttpResponseStatus status = HttpResponseStatus.OK;
-
-        Response response = result2Response(result);
-        try {
-            content = JacksonHelper.getMapper().writeValueAsString(response);
+            content = JacksonHelper.getMapper().writeValueAsString(result);
         } catch (JsonProcessingException ignored) {
+            // TODO
         }
 
-        FullHttpResponse ret = FullHttpResponseFactory.newFullHttpResponse(status, contentType, content.getBytes(CharsetUtil.UTF_8));
-
-        return ret;
+        return FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.OK,
+                contentType, content.getBytes(CharsetUtil.UTF_8));
     }
 }

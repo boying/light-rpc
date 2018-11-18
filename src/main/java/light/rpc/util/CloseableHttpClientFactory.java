@@ -3,6 +3,7 @@ package light.rpc.util;
 
 import org.apache.http.Consts;
 import org.apache.http.HttpHost;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.conn.ClientConnectionManager;
@@ -74,6 +75,7 @@ public class CloseableHttpClientFactory {
         connManager.setMaxTotal(POOL_SIZE);
         connManager.setDefaultMaxPerRoute(POOL_SIZE);
         connManager.setMaxPerRoute(new HttpRoute(new HttpHost(address.getAddress(), address.getPort())), POOL_SIZE);
+        connManager.setValidateAfterInactivity(60000);
 
         // Create socket configuration
         SocketConfig socketConfig = SocketConfig.custom()
@@ -90,7 +92,13 @@ public class CloseableHttpClientFactory {
                 .build();
         connManager.setDefaultConnectionConfig(connectionConfig);
 
-        return HttpClients.custom().setConnectionManager(connManager).build();
+        RequestConfig defaultRequestConfig = RequestConfig.custom()
+                .setSocketTimeout(1000)
+                .setConnectTimeout(1000)
+                .setConnectionRequestTimeout(1000)
+                .build();
+
+        return HttpClients.custom().setConnectionManager(connManager).setDefaultRequestConfig(defaultRequestConfig).build();
     }
 
 }

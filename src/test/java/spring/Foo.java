@@ -1,9 +1,13 @@
-package demo.service;
+package spring;
+
+import demo.service.IFoo;
+import org.springframework.stereotype.Service;
 
 /**
- * Created by jiangzhiwen on 17/2/21.
+ * Created by boying on 2018/11/12.
  */
-public class Foo implements IFoo {
+@Service
+public class Foo implements IFoo{
     @Override
     public String echo(String s) {
         return s;

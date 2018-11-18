@@ -2,7 +2,7 @@ package light.rpc.server;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.netty.channel.ChannelHandler;
-import light.rpc.conf.ServerConf;
+import light.rpc.conf.Config;
 import light.rpc.util.network.SharedChannelHandlerGenerator;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ public class HttpServer implements Server {
      * Rpc服务端配置
      */
     @NonNull
-    private final ServerConf serverConf;
+    private final Config.Server serverConf;
 
     private ExecutorService executorService;
     private light.rpc.util.network.HttpServer httpServer;

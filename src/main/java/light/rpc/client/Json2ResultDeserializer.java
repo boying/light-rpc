@@ -1,7 +1,5 @@
 package light.rpc.client;
 
-import light.rpc.protocol.Response;
-import light.rpc.result.Result;
 import light.rpc.util.json.JacksonHelper;
 
 import java.io.IOException;
@@ -19,7 +17,7 @@ public class Json2ResultDeserializer {
      * @return
      * @throws IOException
      */
-    public static Result deserialize(String json, Class<?> retType) throws IOException, ClassNotFoundException {
+    public static Object deserialize(String json, Class<?> retType) throws IOException, ClassNotFoundException {
         if (json == null) {
             throw new IllegalArgumentException("json is null");
         }
@@ -27,30 +25,11 @@ public class Json2ResultDeserializer {
             throw new IllegalArgumentException("retType is null");
         }
 
-        Response response = JacksonHelper.getMapper().readValue(json, Response.class);
-
-        Result ret = new Result();
-        ret.setAsyncReqId(response.getAsyncReqId());
-        ret.setAsync(response.isAsync());
-        ret.setInvokedSuccess(response.isInvokedSuccess());
-        Object result;
         if (retType != void.class) {
-            result = JacksonHelper.getMapper().readValue(response.getResult(), retType);
+            return JacksonHelper.getMapper().readValue(json, retType);
         } else {
-            result = null;
+            return null;
         }
-        ret.setResult(result);
-
-        if (response.getThrowableType() != null && !response.getThrowableType().equals("")) {
-            Class<?> aClass = Class.forName(response.getThrowableType());
-
-            Throwable throwable = (Throwable) JacksonHelper.getMapper().readValue(response.getThrowable(), aClass);
-            ret.setThrowable(throwable);
-        }
-
-        ret.setErrorMsg(response.getErrorMsg());
-
-        return ret;
     }
 }
 
