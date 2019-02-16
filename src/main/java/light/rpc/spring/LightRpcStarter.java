@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Data
 public class LightRpcStarter implements BeanDefinitionRegistryPostProcessor, ApplicationListener {
-    private String configPath = "light_rpc_config.json";
+    private String configPath = "light_rpc_config.yaml";
     private ServiceBeanProvider serviceBeanProvider;
     private RpcContext rpcContext;
     private String name;
@@ -64,7 +64,7 @@ public class LightRpcStarter implements BeanDefinitionRegistryPostProcessor, App
         registry.registerBeanDefinition(genBeanName(clazz), beanDefinition);
     }
 
-    private String genBeanName(Class clazz){
+    private String genBeanName(Class clazz) {
         return String.format("%s%s_%s", BEAN_PREFIX,
                 StringUtils.isEmpty(name) ? "" + id.getAndIncrement() : name,
                 clazz.getSimpleName());

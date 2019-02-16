@@ -1,7 +1,10 @@
 package light.rpc.conf;
 
 import light.rpc.core.ServiceBeanProvider;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -14,6 +17,7 @@ public class Config {
     private Registry registry;
     private List<Client> clients;
     private Server server;
+    private CircuitBreaker circuitBreaker;
     private RawConfig rawConfig;
 
     @Data
@@ -24,7 +28,6 @@ public class Config {
     @Data
     public static class Client {
         private String appId;
-        private Protocol protocol;
         private int threadPoolSize;
         private Integer methodDefaultTimeoutMillisecond;
         private List<InetSocketAddress> serverProviders;
@@ -34,23 +37,34 @@ public class Config {
     @Data
     public static class Server {
         private String appId;
-        private Protocol protocol;
         private int port;
         private ServiceBeanProvider serviceBeanProvider;
-        private List<Class<?>> interfaces;
-        private int threadPoolSize;
+        private List<Class> interfaces;
+        private int threadPoolSize = Runtime.getRuntime().availableProcessors() * 2;
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Interface {
         private Class clazz;
         private List<Method> methods;
-
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Method {
         private java.lang.reflect.Method method;
         private Integer timeoutMillisecond;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CircuitBreaker{
+        private Integer requestVolumeThreshold;
+        private Integer sleepWindowInMilliseconds;
+        private Integer errorThresholdPercentage;
     }
 }

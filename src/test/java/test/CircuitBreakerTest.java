@@ -1,10 +1,7 @@
-import demo.service.Foo;
-import demo.service.IFoo;
-import light.rpc.core.RpcContext;
-import light.rpc.core.RpcContextTest;
+package test;
+
 import light.rpc.core.ServiceBeanProvider;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -30,6 +27,7 @@ public class CircuitBreakerTest {
     }
 
     public static void syncCallTest() throws Exception {
+    /*
         IFoo obj = new Foo();
         Map<Class, Object> map = new HashMap<>();
         map.put(IFoo.class, obj);
@@ -54,9 +52,10 @@ public class CircuitBreakerTest {
         System.out.println();
 
         System.out.println("foo.defaultFunc()");
-        System.out.println(foo.defaultFunc());
+        System.out.println(foo.defaultFunc("abc"));
 
-        context.close();
+        context.stop();
+    */
     }
 
 }

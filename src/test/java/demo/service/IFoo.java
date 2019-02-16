@@ -4,6 +4,8 @@ package demo.service;
  * Created by jiangzhiwen on 17/2/21.
  */
 public interface IFoo {
+    Response<FuncData> func(String str, Long val);
+
     String echo(String s);
 
     int add(int a, int... b);
@@ -11,13 +13,4 @@ public interface IFoo {
     String concat(String s, int i, Integer in);
 
     void sleep(int timeout);
-
-    void voidFunc();
-
-    void throwException() throws Exception;
-
-
-    default String defaultFunc() {
-        return "IFoo default func called";
-    }
 }

@@ -1,0 +1,50 @@
+# 注册中心配置 非必填
+registry:
+  # 注册中心地址 非必填（默认null） 例：127.0.0.1:2181
+  address: null
+
+# 服务配置 非必填
+server:
+  # 服务id 必填
+  appId: foo
+  # 服务端口号 非必填（默认8888）
+  port: 8888
+  # 提供服务接口的包路径，将扫描该包下所有接口作为服务接口 非必填
+  basePackage: demo.service
+  # 提供服务的接口 非必填 basePackage与interfaces至少填一个，合并二者
+  interfaces:
+    - demo.service.IFoo
+  # 服务线程池大小 非必填（默认 cpu核数 * 2)
+  threadPoolSize: 123
+
+# 客户端配置 非必填
+clients:
+    # 客户端对应服务的id 必填
+  - appId: foo
+    # 远程方法默认超时时间（毫秒） 非必填（默认200）
+    methodDefaultTimeoutMillisecond: 6000
+    # 远程服务地址 非必填 若配置则覆盖配置中心提供的地址
+    serverProviders:
+      - ip: 127.0.0.1
+        port: 8888
+    # 远程方法的包路径，将扫描该包下所有接口作为远程调用接口 非必填
+    basePackage: demo.service
+    # 远程方法所在的接口，可用于配置方法超时时间 非必填
+    interfaces:
+        # 接口路径 必填
+      - name: demo.service.IFoo
+        # 方法超时配置 非必填
+        methods:
+            # 方法名 必填
+          - name: sleep
+            # 超时时间（毫秒） 必填
+            timeoutMillisecond: 1000
+
+# 熔断器配置 非必填
+circuitBreaker:
+  # 至少有requestVolumeThreshold个请求，熔断器才进行错误率的计算 非必填（默认10）
+  requestVolumeThreshold: 10
+  # 熔断器中断请求sleepWindowInMilliseconds毫秒后会进入半打开状态,放部分流量过去重试 非必填（默认5000）
+  sleepWindowInMilliseconds: 5000
+  # 错误率达到errorThresholdPercentage个百分点开启熔断保护 非必填（默认50）
+  errorThresholdPercentage: 50

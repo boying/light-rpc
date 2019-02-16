@@ -1,3 +1,5 @@
+package test;
+
 import light.rpc.server_address_provider.ZooKeeperServerAddressProvider;
 
 import java.net.InetAddress;

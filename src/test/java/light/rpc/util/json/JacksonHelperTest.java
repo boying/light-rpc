@@ -1,5 +1,7 @@
 package light.rpc.util.json;
 
+import com.google.gson.Gson;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -23,10 +25,11 @@ public class JacksonHelperTest {
         System.out.println(result);
     }
 
-    public static class T{
+    public static class T {
         public String a;
         public int b;
     }
+
     @Test
     public void String3Test() throws IOException {
         T t = new T();
@@ -53,18 +56,17 @@ public class JacksonHelperTest {
     public void IntegerTest() throws IOException {
         Integer a = 123;
         String json = JacksonHelper.getMapper().writeValueAsString(a);
-        System.out.println(json);
-        Integer b = JacksonHelper.getMapper().readValue(json, Integer.class);
-        System.out.println(b);
+        Assert.assertEquals(a.toString(), json);
+        Integer b = JacksonHelper.getMapper().readValue(a.toString(), Integer.class);
+        Assert.assertEquals(a, b);
     }
 
-     @Test
+    @Test
     public void nullTest() throws IOException {
-        Integer a = null;
-        String json = JacksonHelper.getMapper().writeValueAsString(a);
-        System.out.println(json);
-        Integer b = JacksonHelper.getMapper().readValue(json, Integer.class);
-        System.out.println(b);
-    }
+        Assert.assertEquals("null", JacksonHelper.getMapper().writeValueAsString(null));
+        Assert.assertNull(JacksonHelper.getMapper().readValue("null", Integer.class));
 
+        Assert.assertEquals("null", new Gson().toJson(null));
+        Assert.assertNull(new Gson().fromJson("null", Integer.class));
+    }
 }

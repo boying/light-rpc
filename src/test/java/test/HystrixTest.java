@@ -1,3 +1,5 @@
+package test;
+
 import com.netflix.hystrix.*;
 
 /**

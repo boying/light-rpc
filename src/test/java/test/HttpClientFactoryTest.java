@@ -1,3 +1,5 @@
+package test;
+
 import light.rpc.util.CloseableHttpClientFactory;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -64,8 +66,8 @@ public class HttpClientFactoryTest {
         CloseableHttpResponse response = httpClient.execute(get);
         //System.out.println(EntityUtils.toString(response.getEntity()));
         response.close();
-        //response.close();
-        //((CloseableHttpClient)gClient).close();
+        //response.stop();
+        //((CloseableHttpClient)gClient).stop();
 
         //System.out.println("end");
     }

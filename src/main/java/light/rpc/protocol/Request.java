@@ -23,7 +23,7 @@ public class Request {
     /**
      * rpc调用的方法参数描述
      */
-    private List<TypeValue> args; // TODO TypeValue --> String
+    private List<TypeValue> args;
 
     /**
      * 方法参数描述类

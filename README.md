@@ -1,50 +1,90 @@
 # light-rpc
 
 ## 简介
-Java Rpc 框架，更轻，更快
+light-rpc是Java Rpc框架，目标更轻，更快，方便使用
 
-服务发现，也可指定服务方，支持重载调用，异步调用
+## 基本说明
 
-## 使用说明
+light-rpc是基于yaml配置文件的运行的，默认是light_rpc_config.yaml。需要在上面配置注册中心，服务提供方，服务使用方等信息。
+RpcContext是框架启动类，提供了，启动服务、获取远程接口代理对象等功能。
+LightRpcStarter是为方便接入Spring容器的启动类
+MainTest是本地可运行的示例
+
+### 注册中心
+
+light-rpc是以Apache ZooKeeper为注册中心的。服务的提供方向注册中心注册服务，服务端使用方从注册中心获取服务信息。配置如下：
+```
+# 注册中心配置 非必填
+registry:
+  # 注册中心地址 非必填（默认null） 例：127.0.0.1:2181
+  address: 127.0.0.1:2181
+```
+不配置注册中心也是可以的。调用方需要配置服务的ip才能调用。
+
+### 远程接口的定义——Java接口
+light-rpc用Java interface表示远程调用的定义。调用方引入接口jar包，框架将会自动创建这些接口的代理对象供程序使用。
+```
+public interface IFoo {
+    Response<FuncData> f(String str, Long val);
+    
+    String echo(String s);
+
+    int add(int a, int... b);
+
+    String concat(String s, int i, Integer in);
+
+    void sleep(int timeout);
+}
+```
 
 ### rpc调用方
 
-#### 步骤
-1. 配置文件
-2. 启动rpc容器
-3. 获取代理对象
-4. 调用函数
-
-#### 范例
+#### 配置文件
 
 ```
-// 创建rpc容器
-RpcContext context = new RpcContext("Configure.json", null);
-// 启动容器
-context.start();
-// 获取代理对象
-IFoo foo = context.getProxy(IFoo.class);
-// 同步调用echo方法
-String s = foo.echo("hello world!");
-// 异步调用echo方法
-Future<String> future = context.asyncCall(IFoo.class, "echo", new Class[]{String.class}, 
-new Object[]{"hello world!"}, String.class);
-// 获取返回值
-s = future.get();
+# 客户端配置 非必填
+clients:
+    # 客户端对应服务的id 必填
+  - appId: foo
+    # 远程方法默认超时时间（毫秒） 非必填（默认200）
+    methodDefaultTimeoutMillisecond: 1000
+    # 远程服务地址 非必填 若配置则覆盖配置中心提供的地址
+    serverProviders:
+      - ip: 127.0.0.1
+        port: 8888
+    # 远程方法的包路径，将扫描该包下所有接口作为远程调用接口 非必填
+    basePackage: demo.service
+    # 远程方法所在的接口，可用于配置方法超时时间 非必填
+    interfaces:
+        # 接口路径 必填
+      - name: demo.service.IFoo
+        # 方法超时配置 非必填
+        methods:
+            # 方法名 必填
+          - name: sleep
+            # 超时时间（毫秒） 必填
+            timeoutMillisecond: 1000
+```
+
+
+#### 使用示例
+```
+// 创建RpcContext
+RpcContext clientContext = new RpcContext("light_rpc_config_client.yaml", null);
+// 启动框架
+clientContext.start(false);
+// 获取远程服务代理对象
+IFoo foo = clientContext.getProxy(IFoo.class);
+// 调用远程服务
+String s = foo.echo("hello");
+
 ```
 
 ### rpc服务方
 
-#### 步骤
-
-1. 配置文件
-2. 实现ServiceBeanProvider接口，框架将使用它提供的对象执行调用方法
-3. 启动rpc容器
-
-#### 范例
-
+#### ServiceBeanProvider
+服务方通过ServiceBeanProvider向框架提供的接口的实现对象，每个远程调用最终会调用实现对象的方法。下面是一个简单实现
 ```
-// 创建实现ServiceBeanProvider实现类
 public static class MyServiceBeanProvider implements ServiceBeanProvider {
     private Map<Class, Object> map;
 
@@ -58,72 +98,66 @@ public static class MyServiceBeanProvider implements ServiceBeanProvider {
         return (T) map.get(clazz);
     }
 }
+```
+如果准备让框架在Spring容器中使用，可以直接使用SpringServiceBeanProvider
 
-// 创建创建实现ServiceBeanProvider对象
-IFoo obj = new Foo();
-Map<Class, Object> map = new HashMap<>();
-map.put(IFoo.class, obj);
-MyServiceBeanProvider provider = new MyServiceBeanProvider(map);
 
-// 创建rpc容器
-RpcContext context = new RpcContext("Configure.json", provider);
+#### 配置文件
 
-// 启动容器
-context.start()
+```
+# 服务配置 非必填
+server:
+  # 服务id 必填
+  appId: foo
+  # 服务端口号 非必填（默认8888）
+  port: 8888
+  # 提供服务接口的包路径，将扫描该包下所有接口作为服务接口 非必填
+  basePackage: demo.service
+  # 提供服务的接口 非必填 basePackage与interfaces至少填一个，合并二者
+  interfaces:
+    - demo.service.IFoo
+  # 服务线程池大小 非必填（默认 cpu核数 * 2)
+  threadPoolSize: 10
 
+```
+
+#### 使用示例
+
+```
+        // 创建ServiceBeanProvider
+        IFoo obj = new Foo();
+        Map<Class, Object> map = new HashMap<>();
+        map.put(IFoo.class, obj);
+        ServiceBeanProvider provider = new MyServiceBeanProvider(map);
+
+        // 创建RpcContext
+        RpcContext serverContext = new RpcContext("light_rpc_config_server.yaml", provider);
+        // 启动框架
+        serverContext.start(false);
     
 ```
 
-## 配置文件说明
+### 接入Spring
 
+为了方便框架接入Spring容器，light-rpc做了相应支持，只需做如下配置：
 ```
-{
-  "common":{ /* 通用配置 */
-    "registryAddress": "127.0.0.1:2181", /* ZooKeeper服务地址,可不填 */
-    "asyncClientPort": 9999 /* 异步调用结果监听端口 */
-  },
+    <bean name="springServiceBeanProvider" class="light.rpc.spring.SpringServiceBeanProvider" />
 
-  "server":{ /* rpc服务方配置,如果不需要提供服务,将此字段设置为null */
-    "appId": "foo", /* 服务id */
-    "protocol": "json", /* 序列化方式,目前仅支持json */
-    "port": 8888, /* 服务端口 */
-    "interfaces": [ /* 服务方支持的调用接口列表 */
-      "demo.service.IFoo"
-    ],
-    "threadPoolSize": 100 /* 服务方线程池大小,对于每个rpc请求,将提交至线程池中处理 */
-  },
-
-  "clients":[ /* rpc使用方列表 */
-    {
-      "appId": "foo", /* 服务id */
-      "protocol": "json", /* 序列化方式,目前仅支持json */
-      "threadPoolSize": 100, /* 线程池大小,客户端在每次rpc请求时,会将请求放入线程池中处理 */
-      "methodDefaultTimeoutMillisecond": 1000, /* 调用超时时间 */
-      "serverProviders":[], /* 指定服务方地址。如果设置该列表,rpc调用将使用配置的地址;如果没有设置,将从注册中心获取服务方地址 */
-      "interfaces": [ /* 将使用的接口配置 */
-        {
-          "name": "demo.service.IFoo", /* 接口名称 */
-          "methods": [ /* 函数超时设置,若不设置,将使用methodDefaultTimeoutMillisecond作为超时时间 */
-            {
-              "name": "sleep", /* 方法名 */
-              "paramTypes": [ /* 方法参数类型列表 */
-                "int"
-              ],
-              "timeoutMillisecond": 1000 /* 超时毫秒 */
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
+    <bean name="lightRpgStarter" class="light.rpc.spring.LightRpcStarter">
+        <constructor-arg value="ConfigureNoZoo_gai.json" />
+        <constructor-arg ref="springServiceBeanProvider" />
+    </bean>
 ```
+SpringServiceBeanProvider会从Spring容器中获取具体的服务对象注册到light-rpc框架中
+LightRpcStarter会自动启动框架
 
-## 范例
+### 熔断
+框架提供熔断机制，如果调用不成功的情况满足一定条件，将自动触发熔断，防止雪崩
 
-light.rpc.core.RpcContextTest 中有示范代码
 
-## 下一步
+## 完整配置文件示例
 
-* 支持protocol buffer序列化方式
-* 完善测试用例
+## curl调用
+
+
+

@@ -1,0 +1,18 @@
+# 注册中心配置 非必填
+registry:
+  # 注册中心地址 非必填（默认null） 例：127.0.0.1:2181
+  address: null
+
+# 服务配置 非必填
+server:
+  # 服务id 必填
+  appId: foo
+  # 服务端口号 非必填（默认8888）
+  port: 8888
+  # 提供服务接口的包路径，将扫描该包下所有接口作为服务接口 非必填
+  basePackage: demo.service
+  # 提供服务的接口 非必填 basePackage与interfaces至少填一个，合并二者
+  interfaces:
+    - demo.service.IFoo
+  # 服务线程池大小 非必填（默认 cpu核数 * 2)
+  threadPoolSize: 123

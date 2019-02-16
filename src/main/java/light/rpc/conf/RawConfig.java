@@ -12,6 +12,7 @@ public class RawConfig {
     private Registry registry;
     private Server server;
     private List<Client> clients;
+    private CircuitBreaker circuitBreaker;
 
     @Data
     public static class Registry{
@@ -21,8 +22,8 @@ public class RawConfig {
     @Data
     public static class Server {
         private String appId;
-        private String protocol;
         private Integer port;
+        private String basePackage;
         private List<String> interfaces;
         private Integer threadPoolSize;
     }
@@ -30,10 +31,9 @@ public class RawConfig {
     @Data
     public static class Client {
         private String appId;
-        private String protocol;
-        private Integer connectionPoolSize;
         private Integer methodDefaultTimeoutMillisecond;
         private List<IpPort> serverProviders;
+        private String basePackage;
         private List<Interface> interfaces;
     }
 
@@ -54,5 +54,12 @@ public class RawConfig {
         private String name;
         private List<Method> methods;
         private Integer timeoutMillisecond;
+    }
+
+    @Data
+    public static class CircuitBreaker{
+        private Integer requestVolumeThreshold;
+        private Integer sleepWindowInMilliseconds;
+        private Integer errorThresholdPercentage;
     }
 }

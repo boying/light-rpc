@@ -1,0 +1,27 @@
+# 注册中心配置 非必填
+registry:
+  # 注册中心地址 非必填（默认null） 例：127.0.0.1:2181
+  address: null
+
+# 客户端配置 非必填
+clients:
+    # 客户端对应服务的id 必填
+  - appId: foo
+    # 远程方法默认超时时间（毫秒） 非必填（默认200）
+    methodDefaultTimeoutMillisecond: 500
+    # 远程服务地址 非必填 若配置则覆盖配置中心提供的地址
+    serverProviders:
+      - ip: 127.0.0.1
+        port: 8888
+    # 远程方法的包路径，将扫描该包下所有接口作为远程调用接口 非必填
+    basePackage: demo.service
+    # 远程方法所在的接口，可用于配置方法超时时间 非必填
+    interfaces:
+        # 接口路径 必填
+      - name: demo.service.IFoo
+        # 方法超时配置 非必填
+        methods:
+            # 方法名 必填
+          - name: sleep
+            # 超时时间（毫秒） 必填
+            timeoutMillisecond: 1000

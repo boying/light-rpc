@@ -1,8 +1,8 @@
 package light.rpc.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 处理Rpc请求的任务
@@ -42,7 +43,7 @@ public class RpcRequestProcessTask implements Runnable {
     /**
      * 请求的ByteBuf
      */
-    private final ByteBuf byteBuf;
+    private final FullHttpRequest httpRequest;
 
     /**
      * 处理请求
@@ -50,7 +51,7 @@ public class RpcRequestProcessTask implements Runnable {
     @Override
     public void run() {
         // 创建Request对象
-        String s = byteBuf.toString(CharsetUtil.UTF_8);
+        String s = httpRequest.content().toString(CharsetUtil.UTF_8);
         Request request;
         try {
             request = JacksonHelper.getMapper().readValue(s, Request.class);
@@ -61,18 +62,12 @@ public class RpcRequestProcessTask implements Runnable {
         }
 
         // 获取调用的类
-        Class<?> clazz;
-        try {
-            clazz = ClassUtil.forName(request.getIface());
-        } catch (ClassNotFoundException e) {
-            invokedFailed("class no found", request);
-            logger.warn("invalid request, no class found");
-            return;
-        }
+        Class<?> clazz = ClassUtil.forName(request.getIface());
 
         // 判断调用的类是在Rpc服务方提供的服务类中
-        List<Class<?>> interfaces = serverConf.getInterfaces();
+        List<Class> interfaces = serverConf.getInterfaces();
         if (!interfaces.contains(clazz)) {
+            // TODO notFound
             invokedFailed("service interface no registered", request);
             logger.warn("invalid request, service interface no registered");
             return;
@@ -90,14 +85,7 @@ public class RpcRequestProcessTask implements Runnable {
         List<Class<?>> types = new ArrayList<>();
         List<Object> values = new ArrayList<>();
         for (Request.TypeValue typeValue : request.getArgs()) {
-            Class<?> type;
-            try {
-                type = ClassUtil.forName(typeValue.getType());
-            } catch (ClassNotFoundException e) {
-                invokedFailed("class no found", request);
-                logger.warn("class no found");
-                return;
-            }
+            Class<?> type = ClassUtil.forName(typeValue.getType());
             types.add(type);
 
             Object o;
@@ -128,12 +116,13 @@ public class RpcRequestProcessTask implements Runnable {
             serverError();
         } catch (IllegalAccessException e) {
             badRequest();
-        } catch ( IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             badRequest();
         } catch (Exception e) {
             serverError();
         }
     }
+
 
     /**
      * 调用成功,返回结果给客户端
@@ -149,12 +138,20 @@ public class RpcRequestProcessTask implements Runnable {
         ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.NOT_FOUND));
     }
 
-    private void serverError(){
+    private void forbidden() {
+        ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.FORBIDDEN));
+    }
+
+    private void serverError() {
         ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR));
     }
 
-    private void badRequest(){
+    private void badRequest() {
         ctx.writeAndFlush(FullHttpResponseFactory.newFullHttpResponse(HttpResponseStatus.BAD_REQUEST));
+    }
+
+    private Iterable<Map.Entry<String, String>> getSession() {
+        return httpRequest.headers();
     }
 
 

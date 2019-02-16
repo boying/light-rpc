@@ -12,8 +12,6 @@ import light.rpc.server_address_provider.IServerAddressProvider;
 import light.rpc.server_address_provider.ListedServerAddressProvider;
 import light.rpc.server_address_provider.ZooKeeperServerAddressProvider;
 import lombok.Data;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Consts;
 import org.apache.http.client.config.RequestConfig;
@@ -36,30 +34,26 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.nio.charset.CodingErrorAction;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 客户端类
  * 客户端是一个rpc服务方的客户端,可以获取调用代理对象,进行异步调用
  */
-@RequiredArgsConstructor
 public class Client {
     private static final Logger logger = LoggerFactory.getLogger(Client.class);
 
-    /**
-     * 通用参数
-     */
-    @NonNull
-    private final Config.Registry registry;
+    private Config config;
 
-    /**
-     * 客户端参数
-     */
-    @NonNull
-    private final Config.Client clientConf;
+    private Config.Client clientConf;
+
+    private Config.Registry registry;
+
 
     private IServerAddressProvider serverProvider;
     private CloseableHttpClient httpClient;
@@ -70,6 +64,12 @@ public class Client {
     private volatile boolean started = false;
     private static final int DEFAULT_METHOD_TIMEOUT = 10000;
     private static final int POOL_SIZE = 100;
+
+    public Client(Config config, Config.Client clientConf) {
+        this.config = config;
+        this.clientConf = clientConf;
+        this.registry = config.getRegistry();
+    }
 
     /**
      * 启动客户端
@@ -132,19 +132,17 @@ public class Client {
 
 
     private void initMethodTimeout() {
-        int defaultTimeout = Optional.ofNullable(clientConf.getMethodDefaultTimeoutMillisecond()).orElse(DEFAULT_METHOD_TIMEOUT);
+        int defaultTimeout = Optional.ofNullable(clientConf.getMethodDefaultTimeoutMillisecond())
+                .orElse(DEFAULT_METHOD_TIMEOUT);
         for (Config.Interface interfaceConf : clientConf.getInterfaces()) {
             Class clazz = interfaceConf.getClazz();
             Method[] methods = clazz.getMethods();
-            for (Method method : methods) {
-                methodTimeoutMap.put(method, defaultTimeout);
-            }
 
-            for (Config.Method methodConf : interfaceConf.getMethods()) {
-                if (methodConf.getTimeoutMillisecond() != null) {
-                    methodTimeoutMap.put(methodConf.getMethod(), methodConf.getTimeoutMillisecond());
-                }
-            }
+            methodTimeoutMap.putAll(Arrays.stream(methods)
+                    .collect(Collectors.toMap(Function.identity(), i -> defaultTimeout)));
+            methodTimeoutMap.putAll(interfaceConf.getMethods().stream()
+                    .filter(i -> i.getTimeoutMillisecond() != null)
+                    .collect(Collectors.toMap(Config.Method::getMethod, Config.Method::getTimeoutMillisecond)));
         }
     }
 
@@ -161,11 +159,8 @@ public class Client {
     }
 
     private void genProxies() throws ClassNotFoundException {
-        List<Config.Interface> interfaceConfs = clientConf.getInterfaces();
-        for (Config.Interface interfaceConf : interfaceConfs) {
-            Class<?> clazz = interfaceConf.getClazz();
-            classObjMap.put(clazz, genProxy(clazz, interfaceConf));
-        }
+        classObjMap.putAll(clientConf.getInterfaces().stream().collect(Collectors
+                .toMap(Config.Interface::getClazz, i -> genProxy(i.getClazz(), i))));
     }
 
     private Object genProxy(Class iface, Config.Interface conf) {
@@ -216,9 +211,12 @@ public class Client {
             super(Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey("" + Client.this.hashCode()))
                     .andCommandKey(HystrixCommandKey.Factory.asKey(method.getName()))
                     .andCommandPropertiesDefaults(HystrixCommandProperties.Setter()
-                            .withCircuitBreakerRequestVolumeThreshold(10)////至少有10个请求，熔断器才进行错误率的计算
-                            .withCircuitBreakerSleepWindowInMilliseconds(5000)//熔断器中断请求5秒后会进入半打开状态,放部分流量过去重试
-                            .withCircuitBreakerErrorThresholdPercentage(50)//错误率达到50开启熔断保护
+                            //至少有n个请求，熔断器才进行错误率的计算
+                            .withCircuitBreakerRequestVolumeThreshold(config.getCircuitBreaker().getRequestVolumeThreshold())
+                            //熔断器中断请求n秒后会进入半打开状态,放部分流量过去重试
+                            .withCircuitBreakerSleepWindowInMilliseconds(config.getCircuitBreaker().getSleepWindowInMilliseconds())
+                            //错误率达到n开启熔断保护
+                            .withCircuitBreakerErrorThresholdPercentage(config.getCircuitBreaker().getErrorThresholdPercentage())
                             .withExecutionIsolationStrategy(HystrixCommandProperties.ExecutionIsolationStrategy.SEMAPHORE)
                             .withExecutionTimeoutEnabled(false)
                             .withExecutionIsolationSemaphoreMaxConcurrentRequests(10)));
@@ -260,6 +258,7 @@ public class Client {
         InetSocketAddress serverProviderAddress = this.serverProvider.get();
 
         HttpPost post = new HttpPost("http://" + serverProviderAddress.getHostName() + ":" + serverProviderAddress.getPort());
+
         post.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
         post.setConfig(RequestConfig.copy(defaultRequestConfig)
                 .setSocketTimeout(methodTimeoutMap.get(method))
@@ -286,5 +285,6 @@ public class Client {
             return Json2ResultDeserializer.deserialize(rsp, method.getReturnType());
         }
     }
+
 
 }

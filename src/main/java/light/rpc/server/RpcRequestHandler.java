@@ -1,6 +1,5 @@
 package light.rpc.server;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -29,6 +28,7 @@ public class RpcRequestHandler extends ChannelInboundHandlerAdapter {
     @NonNull
     private final ExecutorService executorService;
 
+
     /**
      * 处理请求
      * 创建一个处理任务,提交至线程池
@@ -39,9 +39,6 @@ public class RpcRequestHandler extends ChannelInboundHandlerAdapter {
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        FullHttpRequest httpRequest = (FullHttpRequest) msg;
-        ByteBuf byteBuf = httpRequest.content();
-
-        executorService.submit(new RpcRequestProcessTask(serverConf, ctx, byteBuf));
+        executorService.submit(new RpcRequestProcessTask(serverConf, ctx, (FullHttpRequest) msg));
     }
 }

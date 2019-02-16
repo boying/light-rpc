@@ -5,6 +5,14 @@ package demo.service;
  */
 public class Foo implements IFoo {
     @Override
+    public Response<FuncData> func(String str, Long val) {
+        FuncData funcData = new FuncData(str, val);
+        Response<FuncData> rsp = new Response<>();
+        rsp.setData(funcData);
+        return rsp;
+    }
+
+    @Override
     public String echo(String s) {
         return s;
     }
@@ -12,11 +20,6 @@ public class Foo implements IFoo {
     @Override
     public String concat(String s, int i, Integer in) {
         return s + " : " + i + " : " + in;
-    }
-
-    @Override
-    public String defaultFunc() {
-        return "My Foo Func";
     }
 
     @Override
@@ -30,16 +33,6 @@ public class Foo implements IFoo {
         return ret;
     }
 
-    @Override
-    public void voidFunc() {
-
-    }
-
-    @Override
-    public void throwException() throws Exception {
-        System.out.println("in throwException");
-        throw new RuntimeException("Foo Exception");
-    }
 
     @Override
     public void sleep(int timeout) {

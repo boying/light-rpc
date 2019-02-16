@@ -21,10 +21,14 @@ public class ClassUtil {
         primitiveTypeNameClassMap.put(void.class.getName(), void.class);
     }
 
-    public static Class<?> forName(String className) throws ClassNotFoundException {
+    public static Class<?> forName(String className) {
         if (primitiveTypeNameClassMap.containsKey(className)) {
             return primitiveTypeNameClassMap.get(className);
         }
-        return Class.forName(className);
+        try {
+            return Class.forName(className);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

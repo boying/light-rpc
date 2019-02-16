@@ -65,18 +65,7 @@ public class SpringTest {
         System.out.println();
 
         System.out.println("foo.voidFunc()");
-        foo.voidFunc();
         System.out.println();
 
-        try {
-            System.out.println("foo.throwException()");
-            foo.throwException();
-        } catch (Exception e) {
-            System.out.println(e);
-        }
-        System.out.println();
-
-        System.out.println("foo.defaultFunc()");
-        System.out.println(foo.defaultFunc());
     }
 }

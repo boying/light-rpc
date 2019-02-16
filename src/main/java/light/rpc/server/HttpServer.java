@@ -38,7 +38,7 @@ public class HttpServer implements Server {
 
     @Override
     public void start() {
-        String threadNameFormat = "rpc_server-" + serverConf.getAppId() + "-thread_pool-thread-%d";
+        String threadNameFormat = "light-rpc-server-thread-%d";
         executorService = new ThreadPoolExecutor(0, serverConf.getThreadPoolSize(), 1, TimeUnit.MINUTES, new SynchronousQueue<>(), new ThreadFactoryBuilder().setNameFormat(threadNameFormat).build());
 
         List<ChannelHandler> handlers = new ArrayList<>();

@@ -51,7 +51,6 @@ public class RpcContext {
     /**
      * 启动容器
      *
-     * @throws Exception
      */
     public void start(boolean registerToRegistry) throws Exception {
         if (started) {
@@ -74,7 +73,7 @@ public class RpcContext {
     /**
      * 关闭容器
      */
-    public void close() {
+    public void stop() {
         if (!started) {
             return;
         }
@@ -163,13 +162,13 @@ public class RpcContext {
     private void initClients() throws ClassNotFoundException {
         List<Config.Client> clients = conf.getClients();
         for (Config.Client clientConf : clients) {
-            Client client = new Client(conf.getRegistry(), clientConf);
+            Client client = new Client(conf, clientConf);
             client.init();
 
             this.clients.add(client);
             Map<Class, Object> classProxyMap = client.getProxies();
-            classProxyMap.keySet().stream().forEach(clazz -> this.classProxyMap.put(clazz, classProxyMap.get(clazz)));
-            classProxyMap.keySet().stream().forEach(clazz -> classClientMap.put(clazz, client));
+            classProxyMap.keySet().forEach(clazz -> this.classProxyMap.put(clazz, classProxyMap.get(clazz)));
+            classProxyMap.keySet().forEach(clazz -> classClientMap.put(clazz, client));
         }
     }
 
