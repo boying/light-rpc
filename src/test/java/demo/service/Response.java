@@ -3,7 +3,7 @@ package demo.service;
 import lombok.Data;
 
 /**
- * Created by jiangzhiwen592 on 2019/2/12.
+ * Created by boying592 on 2019/2/12.
  */
 @Data
 public class Response<T> {

@@ -7,7 +7,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
 /**
- * Created by jiangzhiwen on 17/2/17.
+ * Created by boying on 17/2/17.
  */
 public class ZookeeperServerProviderTest {
     public static void main(String[] args) throws InterruptedException, UnknownHostException {

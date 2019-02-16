@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * Created by jiangzhiwen on 17/2/15.
+ * Created by boying on 17/2/15.
  */
 public class ZookeeperTest {
     public static void main(String[] args) throws IOException, InterruptedException, KeeperException {

@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Created by jiangzhiwen on 17/2/23.
+ * Created by boying on 17/2/23.
  */
 public class ClassUtil {
     private static Map<String, Class<?>> primitiveTypeNameClassMap = new HashMap<>();

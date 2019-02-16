@@ -4,7 +4,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
 
 /**
- * Created by jiangzhiwen on 17/3/1.
+ * Created by boying on 17/3/1.
  */
 public class FullHttpResponseFactory {
     public static final FullHttpResponse BAD_REQUEST = newFullHttpResponse(HttpResponseStatus.BAD_REQUEST);

@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * Created by jiangzhiwen on 17/2/14.
+ * Created by boying on 17/2/14.
  */
 public class JacksonTest {
     public static enum Sex{

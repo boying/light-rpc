@@ -6,7 +6,7 @@ import io.netty.channel.socket.SocketChannel;
 import light.rpc.util.ServerBootstrapFactory;
 
 /**
- * Created by jiangzhiwen on 17/2/18.
+ * Created by boying on 17/2/18.
  */
 public class NettyTest {
     public static void main(String[] args) throws InterruptedException {

@@ -3,7 +3,7 @@ package light.rpc.util;
 import java.net.InetSocketAddress;
 
 /**
- * Created by jiangzhiwen on 17/2/19.
+ * Created by boying on 17/2/19.
  */
 public class InetSocketAddressFactory {
     public static InetSocketAddress get(String host, int port) {

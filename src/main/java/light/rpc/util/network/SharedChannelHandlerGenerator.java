@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 
 /**
- * Created by jiangzhiwen on 17/2/27.
+ * Created by boying on 17/2/27.
  */
 @RequiredArgsConstructor
 public class SharedChannelHandlerGenerator implements IChannelHandlerGenerator {

@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Created by jiangzhiwen on 17/2/13.
+ * Created by boying on 17/2/13.
  */
 public class CloseableHttpClientFactory {
     private static final int POOL_SIZE = 100;
