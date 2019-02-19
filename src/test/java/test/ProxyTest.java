@@ -5,7 +5,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 /**
- * Created by boying on 17/2/22.
+ * Created by jiangzhiwen on 17/2/22.
  */
 public class ProxyTest {
     public static interface A{

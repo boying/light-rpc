@@ -8,7 +8,7 @@ import light.rpc.util.ServerBootstrapFactory;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Created by boying on 17/2/18.
+ * Created by jiangzhiwen on 17/2/18.
  */
 @RequiredArgsConstructor
 public class HttpServer {

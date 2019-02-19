@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.util.Scanner;
 
 /**
- * Created by boying on 17/2/14.
+ * Created by jiangzhiwen on 17/2/14.
  */
 public class HttpClientFactoryTest {
     public static void main(String[] args) throws IOException {

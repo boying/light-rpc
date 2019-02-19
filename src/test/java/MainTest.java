@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Created by boying on 17/2/12.
+ * Created by jiangzhiwen on 17/2/12.
  */
 public class MainTest {
     private IFoo foo;

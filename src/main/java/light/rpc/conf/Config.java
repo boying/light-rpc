@@ -10,7 +10,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 
 /**
- * Created by boying on 17/2/11.
+ * Created by jiangzhiwen on 17/2/11.
  */
 @Data
 public class Config {

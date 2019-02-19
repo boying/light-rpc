@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 /**
- * Created by boying on 17/2/21.
+ * Created by jiangzhiwen on 17/2/21.
  */
 public class HttpClientProviderTest {
     public static void main(String[] args) throws IOException {

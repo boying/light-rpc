@@ -1,7 +1,7 @@
 package demo.service;
 
 /**
- * Created by boying on 17/2/21.
+ * Created by jiangzhiwen on 17/2/21.
  */
 public class Foo implements IFoo {
     @Override

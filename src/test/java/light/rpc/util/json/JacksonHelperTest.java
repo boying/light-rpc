@@ -7,7 +7,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 /**
- * Created by boying on 17/2/21.
+ * Created by jiangzhiwen on 17/2/21.
  */
 public class JacksonHelperTest {
     @Test

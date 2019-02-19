@@ -8,7 +8,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 /**
- * Created by boying on 17/2/18.
+ * Created by jiangzhiwen on 17/2/18.
  */
 public class ServerBootstrapFactory {
     private static final int DEFAULT_BOSS_EVENT_LOOP_SIZE = 1;
