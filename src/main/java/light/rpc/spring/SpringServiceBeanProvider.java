@@ -19,10 +19,7 @@ public class SpringServiceBeanProvider implements ServiceBeanProvider, Applicati
                 return applicationContext.getBean(name, clazz);
             }
         }
-        return null;
-
-        // TODO
-        // return applicationContext.getBean(clazz);
+        return applicationContext.getBean(clazz);
     }
 
     @Override
